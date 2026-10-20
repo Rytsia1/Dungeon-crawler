@@ -136,11 +136,13 @@ namespace DungeonCrawler.Combat.QTE
 
             if (hitExpected)
             {
+                DungeonCrawler.Audio.AudioManager.Instance?.PlayTypingBlip(currentTypedIndex);
                 currentTypedIndex++;
                 UpdateWordDisplay();
             }
             else if (hitWrong)
             {
+                DungeonCrawler.Audio.AudioManager.Instance?.PlaySFX(DungeonCrawler.Audio.SFXType.Miss, 0.4f);
                 timeRemaining = Mathf.Max(0f, timeRemaining - 0.3f);
             }
         }

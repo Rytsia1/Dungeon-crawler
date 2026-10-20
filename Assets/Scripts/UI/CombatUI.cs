@@ -36,6 +36,10 @@ namespace DungeonCrawler.UI
         [SerializeField] private TimingBarQTE timingBarQTE;
         [SerializeField] private TypingQTE typingQTE;
 
+        [Header("Visual Juice")]
+        [SerializeField] private Image damageFlashImage;
+        private Coroutine flashCoroutine;
+
         public TimingBarQTE TimingBar
         {
             get => timingBarQTE;
@@ -62,7 +66,50 @@ namespace DungeonCrawler.UI
             if (castButton != null)
                 castButton.onClick.AddListener(OnCastClicked);
 
+            EnsureDamageFlashImage();
             ShowCombatUI(false);
+        }
+
+        private void EnsureDamageFlashImage()
+        {
+            if (damageFlashImage == null)
+            {
+                GameObject flashGO = new GameObject("DamageFlashOverlay");
+                flashGO.transform.SetParent(transform, false);
+                damageFlashImage = flashGO.AddComponent<Image>();
+                damageFlashImage.color = new Color(1f, 0f, 0f, 0f);
+                damageFlashImage.raycastTarget = false;
+
+                RectTransform rect = damageFlashImage.rectTransform;
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = Vector2.one;
+                rect.offsetMin = Vector2.zero;
+                rect.offsetMax = Vector2.zero;
+            }
+        }
+
+        public void TriggerDamageFlash(float duration = 0.22f)
+        {
+            EnsureDamageFlashImage();
+            if (flashCoroutine != null) StopCoroutine(flashCoroutine);
+            flashCoroutine = StartCoroutine(DamageFlashRoutine(duration));
+        }
+
+        private System.Collections.IEnumerator DamageFlashRoutine(float duration)
+        {
+            float elapsed = 0f;
+            Color baseColor = new Color(0.9f, 0.05f, 0.05f, 0.45f);
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float alpha = Mathf.Lerp(0.45f, 0f, elapsed / duration);
+                damageFlashImage.color = new Color(baseColor.r, baseColor.g, baseColor.b, alpha);
+                yield return null;
+            }
+
+            damageFlashImage.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0f);
+            flashCoroutine = null;
         }
 
         private void Start()

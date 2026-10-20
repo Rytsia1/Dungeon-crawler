@@ -44,6 +44,9 @@ namespace DungeonCrawler.Interaction
 
             Debug.Log($"[KeyPickup] Player picked up: {keyName}");
 
+            // Play procedural retro key jingle SFX
+            DungeonCrawler.Audio.AudioManager.Instance?.PlaySFX(DungeonCrawler.Audio.SFXType.KeyJingle);
+
             // Set player inventory
             PlayerStats stats = PlayerStats.Instance ?? FindObjectOfType<PlayerStats>();
             if (stats != null)

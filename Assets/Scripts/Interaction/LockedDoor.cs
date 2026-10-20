@@ -50,6 +50,7 @@ namespace DungeonCrawler.Interaction
             // Unlock and open
             isLocked = false;
             Debug.Log("[LockedDoor] Unlocking door with Dungeon Key!");
+            DungeonCrawler.Audio.AudioManager.Instance?.PlaySFX(DungeonCrawler.Audio.SFXType.DoorCreak);
 
             if (HUDManager.Instance != null)
             {

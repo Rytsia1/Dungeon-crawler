@@ -121,6 +121,10 @@ namespace DungeonCrawler.Player
             Vector3 startPosition = transform.position;
             float elapsed = 0f;
 
+            // Audio & visual head-bobbing feedback
+            DungeonCrawler.Audio.AudioManager.Instance?.PlaySFX(DungeonCrawler.Audio.SFXType.Footstep);
+            DungeonCrawler.Effects.CameraJuice.Instance?.DoStepBob(moveDuration, 0.05f);
+
             while (elapsed < moveDuration)
             {
                 elapsed += Time.deltaTime;
@@ -161,6 +165,10 @@ namespace DungeonCrawler.Player
             isMoving = true;
             Vector3 originalPos = transform.position;
             Vector3 bumpTarget = originalPos + direction * bumpDistance;
+
+            // Wall bump thud and camera shake
+            DungeonCrawler.Audio.AudioManager.Instance?.PlaySFX(DungeonCrawler.Audio.SFXType.Damage, 0.6f);
+            DungeonCrawler.Effects.CameraJuice.Instance?.ShakeCamera(bumpDuration * 1.5f, 0.08f);
 
             float halfDuration = bumpDuration * 0.5f;
             float elapsed = 0f;

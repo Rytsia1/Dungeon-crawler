@@ -6,6 +6,8 @@ using DungeonCrawler.Core;
 using DungeonCrawler.Data;
 using DungeonCrawler.Combat.QTE;
 using DungeonCrawler.UI;
+using DungeonCrawler.Audio;
+using DungeonCrawler.Effects;
 
 namespace DungeonCrawler.Combat
 {
@@ -201,14 +203,21 @@ namespace DungeonCrawler.Combat
                 case QTEResult.Perfect:
                     finalDamage = Mathf.RoundToInt(baseAttack * 1.5f);
                     logResult = $"<color=#00FF66>CRITICAL HIT! (Perfect)</color> - {finalDamage} damage!";
+                    CameraJuice.Instance?.HitStop(0.08f);
+                    CameraJuice.Instance?.ShakeCamera(0.2f, 0.15f);
+                    AudioManager.Instance?.PlaySFX(SFXType.SwordSwing, 0.9f);
+                    AudioManager.Instance?.PlaySFX(SFXType.Parry, 1f);
                     break;
                 case QTEResult.Good:
                     finalDamage = baseAttack;
                     logResult = $"<color=#FFFF00>Serangan Kena! (Good)</color> - {finalDamage} damage!";
+                    CameraJuice.Instance?.ShakeCamera(0.12f, 0.08f);
+                    AudioManager.Instance?.PlaySFX(SFXType.SwordSwing, 0.8f);
                     break;
                 case QTEResult.Miss:
                     finalDamage = Mathf.Max(1, Mathf.RoundToInt(baseAttack * 0.3f));
                     logResult = $"<color=#FF5555>Serangan Tergores (Miss)</color> - {finalDamage} damage!";
+                    AudioManager.Instance?.PlaySFX(SFXType.Miss, 0.7f);
                     break;
             }
 
@@ -255,11 +264,15 @@ namespace DungeonCrawler.Combat
             {
                 finalDamage = Mathf.RoundToInt(baseAttack * 2.5f);
                 logResult = $"<color=#00FFFF>MANTRA SUKSES! Ledakan Sihir</color> menimbulkan {finalDamage} damage!";
+                CameraJuice.Instance?.HitStop(0.06f);
+                CameraJuice.Instance?.ShakeCamera(0.25f, 0.18f);
+                AudioManager.Instance?.PlaySFX(SFXType.Parry, 1f);
             }
             else
             {
                 finalDamage = 0;
                 logResult = "<color=#FF3333>Mantra gagal dirapalkan!</color> 0 damage.";
+                AudioManager.Instance?.PlaySFX(SFXType.Miss, 0.7f);
             }
 
             ApplyDamageToEnemy(finalDamage, logResult);
@@ -333,14 +346,22 @@ namespace DungeonCrawler.Combat
                 case QTEResult.Perfect:
                     incomingDamage = 0;
                     defenseLog = "<color=#00FF66>PERFECT PARRY!</color> Serangan musuh ditangkis sempurna (0 damage)!";
+                    CameraJuice.Instance?.HitStop(0.07f);
+                    CameraJuice.Instance?.ShakeCamera(0.16f, 0.12f);
+                    AudioManager.Instance?.PlaySFX(SFXType.Parry, 1f);
                     break;
                 case QTEResult.Good:
                     incomingDamage = Mathf.RoundToInt(enemyPower * 0.5f);
                     defenseLog = $"<color=#FFFF00>GUARD BLOCKED!</color> Menahan sebagian serangan ({incomingDamage} damage).";
+                    CameraJuice.Instance?.ShakeCamera(0.12f, 0.08f);
+                    AudioManager.Instance?.PlaySFX(SFXType.Damage, 0.65f);
                     break;
                 case QTEResult.Miss:
                     incomingDamage = enemyPower;
                     defenseLog = $"<color=#FF3333>DEFENSE FAILED!</color> Terkena serangan penuh ({incomingDamage} damage)!";
+                    CameraJuice.Instance?.ShakeCamera(0.3f, 0.25f);
+                    AudioManager.Instance?.PlaySFX(SFXType.Damage, 1f);
+                    if (combatUI != null) combatUI.TriggerDamageFlash(0.25f);
                     break;
             }
 
