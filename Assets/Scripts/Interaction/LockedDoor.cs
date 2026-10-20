@@ -34,7 +34,7 @@ namespace DungeonCrawler.Interaction
         {
             if (!isLocked || isOpening) return;
 
-            PlayerStats stats = PlayerStats.Instance ?? FindObjectOfType<PlayerStats>();
+            PlayerStats stats = PlayerStats.Instance ?? FindFirstObjectByType<PlayerStats>();
             bool hasKey = stats != null && stats.HasDungeonKey;
 
             if (!hasKey)

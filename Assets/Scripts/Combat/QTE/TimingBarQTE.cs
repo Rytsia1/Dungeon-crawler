@@ -24,11 +24,11 @@ namespace DungeonCrawler.Combat.QTE
 
         [Header("Zone Ratios (0.0 - 1.0)")]
         [SerializeField] private float goodZoneCenter = 0.5f;
-        [SerializeField] private float goodZoneWidth = 0.30f;
-        [SerializeField] private float perfectZoneWidth = 0.10f;
+        [SerializeField] private float goodZoneWidth = 0.35f;
+        [SerializeField] private float perfectZoneWidth = 0.14f;
 
         [Header("Settings")]
-        [SerializeField] private float defaultDuration = 1.2f;
+        [SerializeField] private float defaultDuration = 1.1f;
 
         private bool isActive = false;
         private float currentPosition = 0f;

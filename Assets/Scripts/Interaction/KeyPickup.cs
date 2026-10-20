@@ -48,7 +48,7 @@ namespace DungeonCrawler.Interaction
             DungeonCrawler.Audio.AudioManager.Instance?.PlaySFX(DungeonCrawler.Audio.SFXType.KeyJingle);
 
             // Set player inventory
-            PlayerStats stats = PlayerStats.Instance ?? FindObjectOfType<PlayerStats>();
+            PlayerStats stats = PlayerStats.Instance ?? FindFirstObjectByType<PlayerStats>();
             if (stats != null)
             {
                 stats.HasDungeonKey = true;

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: BossExecutioner
   m_EditorClassIdentifier: DungeonCrawler.Data:EnemyData
   enemyName: Abyssal Executioner
-  maxHealth: 120
+  maxHealth: 130
   attackPower: 22
   isBoss: 1
   attackTelegraphs:

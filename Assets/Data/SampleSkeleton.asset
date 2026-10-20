@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: SampleSkeleton
   m_EditorClassIdentifier: DungeonCrawler.Data:EnemyData
   enemyName: Skeleton
-  maxHealth: 50
-  attackPower: 10
+  maxHealth: 45
+  attackPower: 12
   attackTelegraphs:
   - attackName: Bone Strike
     telegraphDuration: 1.2

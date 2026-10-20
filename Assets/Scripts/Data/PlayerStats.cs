@@ -10,7 +10,7 @@ namespace DungeonCrawler.Data
         [Header("Attributes")]
         [SerializeField] private int maxHealth = 100;
         [SerializeField] private int currentHealth = 100;
-        [SerializeField] private int baseAttack = 15;
+        [SerializeField] private int baseAttack = 20;
 
         [Header("Inventory")]
         [SerializeField] private bool hasDungeonKey = false;

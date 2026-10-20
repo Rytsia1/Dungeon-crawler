@@ -48,6 +48,7 @@ namespace DungeonCrawler.UI.Editor
             CanvasScaler scaler = canvasGO.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
             scaler.matchWidthOrHeight = 0.5f;
 
             canvasGO.AddComponent<GraphicRaycaster>();
@@ -178,13 +179,13 @@ namespace DungeonCrawler.UI.Editor
             RectTransform combatLogRect = combatLogText.GetComponent<RectTransform>();
             SetAnchors(combatLogRect, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -200), new Vector2(900, 45));
 
-            // Action Menu (Bottom Right)
+            // Action Menu (Bottom Center)
             GameObject actionMenu = CreateUIObject("ActionMenuPanel", combatPanel.transform);
             RectTransform actionMenuRect = actionMenu.GetComponent<RectTransform>();
-            SetAnchors(actionMenuRect, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-60, 50), new Vector2(400, 100));
+            SetAnchors(actionMenuRect, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0, 50), new Vector2(420, 90));
 
-            Button attackBtn = CreateButton("AttackButton", actionMenu.transform, "ATTACK (Fisik)", new Color(0.85f, 0.2f, 0.2f), new Vector2(-220, 0), new Vector2(180, 60));
-            Button castBtn = CreateButton("CastButton", actionMenu.transform, "CAST (Sihir)", new Color(0.2f, 0.5f, 0.9f), new Vector2(-20, 0), new Vector2(180, 60));
+            Button attackBtn = CreateButton("AttackButton", actionMenu.transform, "ATTACK (Fisik)", new Color(0.85f, 0.2f, 0.2f), new Vector2(-105, 0), new Vector2(190, 60));
+            Button castBtn = CreateButton("CastButton", actionMenu.transform, "CAST (Sihir)", new Color(0.2f, 0.5f, 0.9f), new Vector2(105, 0), new Vector2(190, 60));
 
             // Timing Bar Widget (Center)
             GameObject timingWidget = CreateUIObject("TimingBarWidget", combatPanel.transform);

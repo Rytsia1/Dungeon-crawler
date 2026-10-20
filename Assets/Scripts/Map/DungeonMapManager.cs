@@ -72,7 +72,7 @@ namespace DungeonCrawler.Map
             GameObject playerGO = GameObject.FindGameObjectWithTag("Player");
             if (playerGO == null)
             {
-                playerController = FindObjectOfType<PlayerGridController>();
+                playerController = FindFirstObjectByType<PlayerGridController>();
                 if (playerController != null) playerGO = playerController.gameObject;
             }
 
