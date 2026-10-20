@@ -46,7 +46,7 @@ namespace DungeonCrawler.Dungeon
             // Start Combat
             if (CombatManager.Instance != null)
             {
-                CombatManager.Instance.StartCombat(enemyData);
+                CombatManager.Instance.StartCombat(enemyData, gameObject);
             }
             else if (GameStateManager.Instance != null)
             {

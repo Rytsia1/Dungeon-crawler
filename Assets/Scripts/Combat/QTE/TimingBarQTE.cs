@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -64,7 +65,13 @@ namespace DungeonCrawler.Combat.QTE
             }
         }
 
-        public void StartQTE(KeyCode triggerKey, Action<QTEResult> onComplete, float duration = 0f, string prompt = "Tekan [SPASI] di Sweet Spot!")
+        public void StartQTE(
+            KeyCode triggerKey, 
+            Action<QTEResult> onComplete, 
+            float duration = 0f, 
+            string prompt = "Tekan [SPASI] di Sweet Spot!",
+            float cursorSpeed = 1f,
+            AnimationCurve speedCurve = null)
         {
             gameObject.SetActive(true);
             if (widgetRoot != null) widgetRoot.SetActive(true);
@@ -74,6 +81,9 @@ namespace DungeonCrawler.Combat.QTE
             currentTriggerKey = triggerKey;
             completionCallback = onComplete;
             if (duration <= 0f) duration = defaultDuration;
+            if (cursorSpeed <= 0f) cursorSpeed = 1f;
+
+            float actualDuration = duration / cursorSpeed;
 
             if (promptText != null) promptText.text = prompt;
             if (resultText != null) resultText.text = "";
@@ -81,10 +91,10 @@ namespace DungeonCrawler.Combat.QTE
             SetupZoneVisuals();
             isActive = true;
 
-            StartCoroutine(RunTimingRoutine(duration));
+            StartCoroutine(RunTimingRoutine(actualDuration, speedCurve));
         }
 
-        private IEnumerator RunTimingRoutine(float duration)
+        private IEnumerator RunTimingRoutine(float duration, AnimationCurve speedCurve)
         {
             float elapsed = 0f;
             currentPosition = 0f;
@@ -94,7 +104,10 @@ namespace DungeonCrawler.Combat.QTE
             while (elapsed < duration)
             {
                 elapsed += Time.deltaTime;
-                currentPosition = Mathf.Clamp01(elapsed / duration);
+                float normalizedT = Mathf.Clamp01(elapsed / duration);
+
+                // Support non-linear speed curves (e.g. erratic/delayed swing)
+                currentPosition = speedCurve != null ? Mathf.Clamp01(speedCurve.Evaluate(normalizedT)) : normalizedT;
                 UpdateCursorVisual(currentPosition);
 
                 if (CheckInputTrigger())
@@ -113,6 +126,85 @@ namespace DungeonCrawler.Combat.QTE
             }
 
             yield return ShowResultAndFinish(result);
+        }
+
+        /// <summary>
+        /// Starts a multi-hit QTE sequence (e.g. Boss Flurry attack).
+        /// Calls onFinished with an array of booleans indicating success (Good/Perfect) per swing.
+        /// </summary>
+        public void StartMultiQTE(
+            int hitCount, 
+            float delayBetween, 
+            Action<bool[]> onFinished,
+            KeyCode triggerKey = KeyCode.Space,
+            float singleDuration = 0.85f,
+            string promptPrefix = "MULTI-PARRY! Tekan [SPASI]!")
+        {
+            gameObject.SetActive(true);
+            if (widgetRoot != null) widgetRoot.SetActive(true);
+
+            StopAllCoroutines();
+            currentTriggerKey = triggerKey;
+            isActive = true;
+
+            StartCoroutine(RunMultiQTERoutine(hitCount, delayBetween, onFinished, singleDuration, promptPrefix));
+        }
+
+        private IEnumerator RunMultiQTERoutine(
+            int hitCount, 
+            float delayBetween, 
+            Action<bool[]> onFinished, 
+            float singleDuration, 
+            string promptPrefix)
+        {
+            bool[] results = new bool[hitCount];
+            SetupZoneVisuals();
+
+            for (int i = 0; i < hitCount; i++)
+            {
+                if (promptText != null)
+                {
+                    promptText.text = $"{promptPrefix} ({i + 1}/{hitCount})";
+                }
+                if (resultText != null) resultText.text = "";
+
+                float elapsed = 0f;
+                currentPosition = 0f;
+                QTEResult hitResult = QTEResult.Miss;
+                bool hitRegistered = false;
+
+                while (elapsed < singleDuration)
+                {
+                    elapsed += Time.deltaTime;
+                    currentPosition = Mathf.Clamp01(elapsed / singleDuration);
+                    UpdateCursorVisual(currentPosition);
+
+                    if (CheckInputTrigger())
+                    {
+                        hitRegistered = true;
+                        hitResult = EvaluatePosition(currentPosition);
+                        break;
+                    }
+                    yield return null;
+                }
+
+                if (!hitRegistered) hitResult = QTEResult.Miss;
+
+                results[i] = (hitResult == QTEResult.Good || hitResult == QTEResult.Perfect);
+
+                if (resultText != null)
+                {
+                    resultText.text = results[i] 
+                        ? (hitResult == QTEResult.Perfect ? "<color=#00FF66>PARRY!</color>" : "<color=#FFFF00>BLOCK!</color>")
+                        : "<color=#FF3333>HIT!</color>";
+                }
+
+                yield return new WaitForSeconds(delayBetween);
+            }
+
+            isActive = false;
+            widgetRoot.SetActive(false);
+            onFinished?.Invoke(results);
         }
 
         private bool CheckInputTrigger()

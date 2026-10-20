@@ -8,6 +8,9 @@ using DungeonCrawler.Interaction;
 using DungeonCrawler.Player;
 using DungeonCrawler.Effects;
 using DungeonCrawler.Audio;
+using DungeonCrawler.Combat;
+using DungeonCrawler.Combat.Boss;
+using DungeonCrawler.Map;
 
 namespace DungeonCrawler.Editor
 {
@@ -199,6 +202,7 @@ namespace DungeonCrawler.Editor
 
             EncounterTrigger skelTrigger = skelObj.AddComponent<EncounterTrigger>();
             skelTrigger.Enemy = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/Data/SampleSkeleton.asset");
+            skelObj.AddComponent<EnemyVisualFeedback>();
 
             // ================= 6. DUNGEON KEY ================= //
             GameObject oldKey = GameObject.Find("Dungeon_Key");
@@ -280,6 +284,8 @@ namespace DungeonCrawler.Editor
 
             EncounterTrigger bossTrigger = bossObj.AddComponent<EncounterTrigger>();
             bossTrigger.Enemy = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/Data/BossExecutioner.asset");
+            bossObj.AddComponent<EnemyVisualFeedback>();
+            bossObj.AddComponent<BossCombatBehavior>();
 
             // ================= 9. TORCHES SETUP ================= //
             // Start Room Torches
@@ -316,11 +322,14 @@ namespace DungeonCrawler.Editor
             // ================= 11. MANAGERS & PLAYER SETUP ================= //
             SetupManagersAndEffects();
 
+            // ================= 12. BUILD COMBAT & EXPLORATION UI WITH MINIMAP ================= //
+            DungeonCrawler.UI.Editor.CombatUIBuilder.BuildUI();
+
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
                 UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene()
             );
 
-            Debug.Log("[DungeonBuilder] Visual overhaul complete: Dark fantasy PS1 aesthetics, seamless enclosed geometry, pixelated textures, atmospheric lighting, and menacing red-eyed enemies!");
+            Debug.Log("[DungeonBuilder] Fase 6 Overhaul complete: Minimap auto-map, multi-hit/erratic Boss combat, and hit flash/death enemy feedback integrated!");
         }
 
         private static void CreateEnemyEye(Transform parent, Vector3 localPos, Material eyeMat, float scale = 0.12f)
@@ -399,9 +408,12 @@ namespace DungeonCrawler.Editor
         private static void SetupManagersAndEffects()
         {
             GameObject managersGO = GameObject.Find("_Managers");
-            if (managersGO != null && managersGO.GetComponent<AudioManager>() == null)
+            if (managersGO != null)
             {
-                managersGO.AddComponent<AudioManager>();
+                if (managersGO.GetComponent<AudioManager>() == null)
+                    managersGO.AddComponent<AudioManager>();
+                if (managersGO.GetComponent<DungeonMapManager>() == null)
+                    managersGO.AddComponent<DungeonMapManager>();
             }
 
             GameObject playerGO = GameObject.Find("Player");

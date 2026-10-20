@@ -7,11 +7,13 @@ namespace DungeonCrawler.Effects
     public class RetroSetup : MonoBehaviour
     {
         [Header("Retro Resolution Settings (PS1 / 32-Bit Style)")]
-        [SerializeField] private bool enableRetroResolution = true;
+        [SerializeField] private bool enableRetroResolution = false;
         [SerializeField] private int targetWidth = 480;
         [SerializeField] private int targetHeight = 270;
 
         private Camera targetCamera;
+        private Camera blitCamera;
+        private GameObject blitCamGO;
         private RenderTexture retroTexture;
         private GameObject retroCanvasGO;
         private RawImage retroDisplayImage;
@@ -22,6 +24,11 @@ namespace DungeonCrawler.Effects
             if (enableRetroResolution)
             {
                 SetupRetroDisplay();
+            }
+            else if (targetCamera != null && targetCamera.targetTexture != null)
+            {
+                // Ensure targetTexture is null so camera renders directly to Display 1
+                targetCamera.targetTexture = null;
             }
         }
 
@@ -39,6 +46,16 @@ namespace DungeonCrawler.Effects
             retroTexture.Create();
 
             targetCamera.targetTexture = retroTexture;
+
+            // Dedicated screen blit camera targeting Display 1 so Unity never shows "No cameras rendering"
+            blitCamGO = new GameObject("_RetroBlitCamera");
+            blitCamGO.transform.SetParent(transform, false);
+            blitCamera = blitCamGO.AddComponent<Camera>();
+            blitCamera.clearFlags = CameraClearFlags.Nothing;
+            blitCamera.cullingMask = 0; // Do not re-render 3D world
+            blitCamera.depth = 100;
+            blitCamera.targetDisplay = 0; // Target Display 1
+            blitCamera.targetTexture = null; // Renders directly to Display 1!
 
             // Create ScreenSpaceOverlay Canvas to display the chunky pixels behind the HUD
             retroCanvasGO = new GameObject("_RetroDisplayCanvas");
@@ -67,7 +84,17 @@ namespace DungeonCrawler.Effects
             Debug.Log($"[RetroSetup] Initialized PS1 chunky rendering: {targetWidth}x{targetHeight} (Point Filtering).");
         }
 
+        private void OnDisable()
+        {
+            Cleanup();
+        }
+
         private void OnDestroy()
+        {
+            Cleanup();
+        }
+
+        private void Cleanup()
         {
             if (targetCamera != null && targetCamera.targetTexture == retroTexture)
             {
@@ -81,9 +108,16 @@ namespace DungeonCrawler.Effects
                 retroTexture = null;
             }
 
+            if (blitCamGO != null)
+            {
+                Destroy(blitCamGO);
+                blitCamGO = null;
+            }
+
             if (retroCanvasGO != null)
             {
                 Destroy(retroCanvasGO);
+                retroCanvasGO = null;
             }
         }
     }

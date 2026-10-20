@@ -88,6 +88,12 @@ namespace DungeonCrawler.UI.Editor
             notificationText.color = Color.white;
             notificationText.gameObject.SetActive(false);
 
+            // ================= MINIMAP AUTO-MAP WIDGET (Top-Right) ================= //
+            GameObject minimapGO = CreateUIObject("MinimapWidget", explorationPanel.transform);
+            RectTransform minimapRect = minimapGO.GetComponent<RectTransform>();
+            SetAnchors(minimapRect, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-25, -25), new Vector2(160, 184));
+            minimapGO.AddComponent<DungeonCrawler.Map.MinimapUI>();
+
             // ================= GAME OVER PANEL ================= //
             GameObject gameOverPanel = CreateUIObject("GameOverPanel", canvasGO.transform);
             SetFullStretch(gameOverPanel.GetComponent<RectTransform>());

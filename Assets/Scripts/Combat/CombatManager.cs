@@ -8,6 +8,7 @@ using DungeonCrawler.Combat.QTE;
 using DungeonCrawler.UI;
 using DungeonCrawler.Audio;
 using DungeonCrawler.Effects;
+using DungeonCrawler.Combat.Boss;
 
 namespace DungeonCrawler.Combat
 {
@@ -21,6 +22,9 @@ namespace DungeonCrawler.Combat
         [Header("Active Combat")]
         [SerializeField] private EnemyData activeEnemy;
         [SerializeField] private int activeEnemyCurrentHealth;
+        [SerializeField] private GameObject activeEnemyObject;
+        private EnemyVisualFeedback activeVisualFeedback;
+        private BossCombatBehavior activeBossBehavior;
 
         [Header("References")]
         [SerializeField] private PlayerStats playerStats;
@@ -32,6 +36,7 @@ namespace DungeonCrawler.Combat
         public CombatState CurrentCombatState => currentCombatState;
         public EnemyData ActiveEnemy => activeEnemy;
         public int ActiveEnemyCurrentHealth => activeEnemyCurrentHealth;
+        public GameObject ActiveEnemyObject => activeEnemyObject;
 
         public event Action<CombatState> OnCombatStateChanged;
         public event Action<EnemyData> OnCombatStarted;
@@ -56,15 +61,15 @@ namespace DungeonCrawler.Combat
         {
             if (playerStats == null)
             {
-                playerStats = FindObjectOfType<PlayerStats>();
+                playerStats = PlayerStats.Instance ?? FindFirstObjectByType<PlayerStats>();
             }
             if (combatUI == null)
             {
-                combatUI = CombatUI.Instance ?? FindObjectOfType<CombatUI>();
+                combatUI = CombatUI.Instance ?? FindFirstObjectByType<CombatUI>();
             }
         }
 
-        public void StartCombat(EnemyData enemy)
+        public void StartCombat(EnemyData enemy, GameObject enemyGameObject = null)
         {
             if (enemy == null)
             {
@@ -75,8 +80,22 @@ namespace DungeonCrawler.Combat
             FindReferences();
 
             activeEnemy = enemy;
+            activeEnemyObject = enemyGameObject;
             activeEnemyCurrentHealth = enemy.MaxHealth;
-            Debug.Log($"[CombatManager] Combat started against {enemy.EnemyName} (HP: {enemy.MaxHealth}, ATK: {enemy.AttackPower})");
+
+            // Fetch visual feedback and boss behavior if available
+            if (activeEnemyObject != null)
+            {
+                activeVisualFeedback = activeEnemyObject.GetComponent<EnemyVisualFeedback>();
+                activeBossBehavior = activeEnemyObject.GetComponent<BossCombatBehavior>();
+            }
+            else
+            {
+                activeVisualFeedback = null;
+                activeBossBehavior = null;
+            }
+
+            Debug.Log($"[CombatManager] Combat started against {enemy.EnemyName} (HP: {enemy.MaxHealth}, ATK: {enemy.AttackPower}) | BossBehavior: {activeBossBehavior != null}");
 
             if (GameStateManager.Instance != null)
             {
@@ -102,6 +121,11 @@ namespace DungeonCrawler.Combat
         {
             Debug.Log($"[CombatManager] Combat ended. Player won: {playerWon}");
             ChangeCombatState(CombatState.None);
+
+            if (playerWon && activeVisualFeedback != null)
+            {
+                activeVisualFeedback.PlayDeathAnimation();
+            }
 
             if (combatUI != null)
             {
@@ -137,6 +161,9 @@ namespace DungeonCrawler.Combat
             }
 
             activeEnemy = null;
+            activeEnemyObject = null;
+            activeVisualFeedback = null;
+            activeBossBehavior = null;
             activeEnemyCurrentHealth = 0;
         }
 
@@ -282,6 +309,13 @@ namespace DungeonCrawler.Combat
         {
             activeEnemyCurrentHealth = Mathf.Max(0, activeEnemyCurrentHealth - damage);
 
+            // Enemy hit flash & particles visual feedback
+            if (activeVisualFeedback != null && damage > 0)
+            {
+                bool isCrit = logMessage.Contains("CRITICAL") || logMessage.Contains("MANTRA SUKSES");
+                activeVisualFeedback.PlayHitFeedback(isCrit);
+            }
+
             if (combatUI != null)
             {
                 combatUI.UpdateEnemyHealth(activeEnemyCurrentHealth, activeEnemy.MaxHealth, activeEnemy.EnemyName);
@@ -318,25 +352,32 @@ namespace DungeonCrawler.Combat
 
             ChangeCombatState(CombatState.EnemyTurn_DefendQTE);
 
-            if (combatUI != null)
+            if (activeBossBehavior != null)
             {
-                combatUI.SetTurnStatus("BERTAHAN! Tekan [SPASI] di Sweet Spot!");
+                // Specialized Boss Attack Pattern (Multi-hit Flurry or Delayed Cleave)
+                if (combatUI != null) combatUI.SetTurnStatus("<color=#FF0000>SERANGAN BOSS!</color>");
+                activeBossBehavior.ExecuteBossAttack(combatUI != null ? combatUI.TimingBar : null, activeEnemy.AttackPower, OnEnemyAttackResolved);
+            }
+            else
+            {
+                if (combatUI != null)
+                {
+                    combatUI.SetTurnStatus("BERTAHAN! Tekan [SPASI] di Sweet Spot!");
 
-                if (combatUI.TimingBar != null)
-                {
-                    combatUI.TimingBar.StartQTE(KeyCode.Space, OnEnemyAttackDefended, 1.1f, "PARRY / BLOCK! Tekan [SPASI]!");
-                }
-                else
-                {
-                    OnEnemyAttackDefended(QTEResult.Miss);
+                    if (combatUI.TimingBar != null)
+                    {
+                        combatUI.TimingBar.StartQTE(KeyCode.Space, OnEnemyAttackDefended, 1.1f, "PARRY / BLOCK! Tekan [SPASI]!");
+                    }
+                    else
+                    {
+                        OnEnemyAttackDefended(QTEResult.Miss);
+                    }
                 }
             }
         }
 
         private void OnEnemyAttackDefended(QTEResult defenseResult)
         {
-            ChangeCombatState(CombatState.TurnResolution);
-
             int enemyPower = activeEnemy != null ? activeEnemy.AttackPower : 10;
             int incomingDamage = 0;
             string defenseLog = "";
@@ -361,9 +402,15 @@ namespace DungeonCrawler.Combat
                     defenseLog = $"<color=#FF3333>DEFENSE FAILED!</color> Terkena serangan penuh ({incomingDamage} damage)!";
                     CameraJuice.Instance?.ShakeCamera(0.3f, 0.25f);
                     AudioManager.Instance?.PlaySFX(SFXType.Damage, 1f);
-                    if (combatUI != null) combatUI.TriggerDamageFlash(0.25f);
                     break;
             }
+
+            OnEnemyAttackResolved(incomingDamage, defenseLog);
+        }
+
+        private void OnEnemyAttackResolved(int incomingDamage, string defenseLog)
+        {
+            ChangeCombatState(CombatState.TurnResolution);
 
             if (playerStats != null)
             {
@@ -379,7 +426,12 @@ namespace DungeonCrawler.Combat
                 combatUI.SetCombatLog(defenseLog);
             }
 
-            Debug.Log($"[CombatManager] Player defended ({defenseResult}). Received {incomingDamage} dmg.");
+            if (incomingDamage > 0 && combatUI != null)
+            {
+                combatUI.TriggerDamageFlash(0.25f);
+            }
+
+            Debug.Log($"[CombatManager] Player turn resolved. Received {incomingDamage} dmg.");
 
             if (playerStats != null && playerStats.CurrentHealth <= 0)
             {
