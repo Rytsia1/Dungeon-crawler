@@ -123,7 +123,15 @@ namespace DungeonCrawler.Combat
 
             if (GameStateManager.Instance != null)
             {
-                GameStateManager.Instance.ChangeState(playerWon ? GameState.Exploring : GameState.GameOver);
+                if (!playerWon)
+                {
+                    GameStateManager.Instance.ChangeState(GameState.GameOver);
+                }
+                else
+                {
+                    bool isBossFight = (activeEnemy != null && (activeEnemy.IsBoss || activeEnemy.EnemyName.Contains("Executioner")));
+                    GameStateManager.Instance.ChangeState(isBossFight ? GameState.Victory : GameState.Exploring);
+                }
             }
 
             activeEnemy = null;

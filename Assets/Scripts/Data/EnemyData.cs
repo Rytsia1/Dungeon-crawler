@@ -27,6 +27,7 @@ namespace DungeonCrawler.Data
         [SerializeField] private string enemyName = "Skeleton";
         [SerializeField] private int maxHealth = 50;
         [SerializeField] private int attackPower = 10;
+        [SerializeField] private bool isBoss = false;
 
         [Header("Telegraph & QTE Timings")]
         [SerializeField] private List<EnemyAttackTelegraph> attackTelegraphs = new List<EnemyAttackTelegraph>();
@@ -47,6 +48,12 @@ namespace DungeonCrawler.Data
         {
             get => attackPower;
             set => attackPower = value;
+        }
+
+        public bool IsBoss
+        {
+            get => isBoss;
+            set => isBoss = value;
         }
 
         public List<EnemyAttackTelegraph> AttackTelegraphs => attackTelegraphs;

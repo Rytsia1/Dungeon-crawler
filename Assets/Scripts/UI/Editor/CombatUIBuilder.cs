@@ -20,7 +20,7 @@ namespace DungeonCrawler.UI.Editor
         public static void BuildUI()
         {
             // 1. Ensure EventSystem exists
-            EventSystem eventSystem = Object.FindObjectOfType<EventSystem>();
+            EventSystem eventSystem = Object.FindFirstObjectByType<EventSystem>();
             if (eventSystem == null)
             {
                 GameObject esGO = new GameObject("EventSystem");
@@ -52,14 +52,91 @@ namespace DungeonCrawler.UI.Editor
 
             canvasGO.AddComponent<GraphicRaycaster>();
             CombatUI combatUI = canvasGO.AddComponent<CombatUI>();
+            HUDManager hudManager = canvasGO.AddComponent<HUDManager>();
 
-            // 3. CombatPanel (Root overlay)
+            // ================= EXPLORATION HUD ================= //
+            GameObject explorationPanel = CreateUIObject("ExplorationPanel", canvasGO.transform);
+            SetFullStretch(explorationPanel.GetComponent<RectTransform>());
+
+            // Objective Box (Top-Left)
+            GameObject objectiveBox = CreateUIObject("ObjectiveBox", explorationPanel.transform);
+            RectTransform objBoxRect = objectiveBox.GetComponent<RectTransform>();
+            SetAnchors(objBoxRect, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(40, -40), new Vector2(520, 100));
+            Image objBoxBg = objectiveBox.AddComponent<Image>();
+            objBoxBg.color = new Color(0.05f, 0.05f, 0.08f, 0.65f);
+
+            TMP_Text objectiveText = CreateText("ObjectiveText", objectiveBox.transform, "Objektif: Cari Kunci Dungeon di Ruang Tersegel.", 20, FontStyles.Bold, TextAlignmentOptions.TopLeft);
+            RectTransform objTextRect = objectiveText.GetComponent<RectTransform>();
+            SetAnchors(objTextRect, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(15, -15), new Vector2(-30, 40));
+            objectiveText.color = new Color(1f, 0.9f, 0.2f);
+
+            TMP_Text keyStatusText = CreateText("KeyStatusText", objectiveBox.transform, "Kunci Dungeon: [BELUM DITEMUKAN]", 17, FontStyles.Normal, TextAlignmentOptions.TopLeft);
+            RectTransform keyTextRect = keyStatusText.GetComponent<RectTransform>();
+            SetAnchors(keyTextRect, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 0f), new Vector2(15, 15), new Vector2(-30, 30));
+
+            // Interaction Prompt (Center-Bottom)
+            TMP_Text promptText = CreateText("InteractionPromptText", explorationPanel.transform, "[E] Buka Pintu", 28, FontStyles.Bold, TextAlignmentOptions.Center);
+            RectTransform promptRect = promptText.GetComponent<RectTransform>();
+            SetAnchors(promptRect, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0, 160), new Vector2(700, 50));
+            promptText.color = new Color(0.2f, 0.95f, 1f);
+            promptText.gameObject.SetActive(false);
+
+            // Notification Text (Center banner)
+            TMP_Text notificationText = CreateText("NotificationText", explorationPanel.transform, "", 26, FontStyles.Bold, TextAlignmentOptions.Center);
+            RectTransform notifRect = notificationText.GetComponent<RectTransform>();
+            SetAnchors(notifRect, new Vector2(0.5f, 0.65f), new Vector2(0.5f, 0.65f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(800, 60));
+            notificationText.color = Color.white;
+            notificationText.gameObject.SetActive(false);
+
+            // ================= GAME OVER PANEL ================= //
+            GameObject gameOverPanel = CreateUIObject("GameOverPanel", canvasGO.transform);
+            SetFullStretch(gameOverPanel.GetComponent<RectTransform>());
+            Image goBg = gameOverPanel.AddComponent<Image>();
+            goBg.color = new Color(0.1f, 0.02f, 0.02f, 0.92f);
+
+            TMP_Text goTitle = CreateText("GameOverTitle", gameOverPanel.transform, "KAMU GUGUR", 64, FontStyles.Bold, TextAlignmentOptions.Center);
+            RectTransform goTitleRect = goTitle.GetComponent<RectTransform>();
+            SetAnchors(goTitleRect, new Vector2(0.5f, 0.6f), new Vector2(0.5f, 0.6f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(800, 100));
+            goTitle.color = new Color(0.9f, 0.15f, 0.15f);
+
+            TMP_Text goSub = CreateText("GameOverSubtitle", gameOverPanel.transform, "Jiwa pengelana tertelan oleh kegelapan labirin.", 22, FontStyles.Normal, TextAlignmentOptions.Center);
+            RectTransform goSubRect = goSub.GetComponent<RectTransform>();
+            SetAnchors(goSubRect, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(800, 50));
+            goSub.color = new Color(0.8f, 0.8f, 0.8f);
+
+            Button restartGoBtn = CreateButton("RestartGameOverButton", gameOverPanel.transform, "COBA LAGI", new Color(0.75f, 0.2f, 0.2f), new Vector2(0, -80), new Vector2(240, 65));
+            RectTransform rgoRect = restartGoBtn.GetComponent<RectTransform>();
+            SetAnchors(rgoRect, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -80), new Vector2(240, 65));
+            gameOverPanel.SetActive(false);
+
+            // ================= VICTORY PANEL ================= //
+            GameObject victoryPanel = CreateUIObject("VictoryPanel", canvasGO.transform);
+            SetFullStretch(victoryPanel.GetComponent<RectTransform>());
+            Image vicBg = victoryPanel.AddComponent<Image>();
+            vicBg.color = new Color(0.04f, 0.08f, 0.04f, 0.94f);
+
+            TMP_Text vicTitle = CreateText("VictoryTitle", victoryPanel.transform, "DUNGEON SELESAI!", 68, FontStyles.Bold, TextAlignmentOptions.Center);
+            RectTransform vicTitleRect = vicTitle.GetComponent<RectTransform>();
+            SetAnchors(vicTitleRect, new Vector2(0.5f, 0.62f), new Vector2(0.5f, 0.62f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900, 110));
+            vicTitle.color = new Color(1f, 0.85f, 0.15f);
+
+            TMP_Text vicSub = CreateText("VictorySubtitle", victoryPanel.transform, "Abyssal Executioner telah ditaklukkan. Labirin kembali tenang.", 24, FontStyles.Normal, TextAlignmentOptions.Center);
+            RectTransform vicSubRect = vicSub.GetComponent<RectTransform>();
+            SetAnchors(vicSubRect, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900, 50));
+            vicSub.color = new Color(0.9f, 0.95f, 0.9f);
+
+            Button restartVicBtn = CreateButton("RestartVictoryButton", victoryPanel.transform, "MAIN LAGI", new Color(0.2f, 0.75f, 0.35f), new Vector2(0, -90), new Vector2(240, 65));
+            RectTransform rvicRect = restartVicBtn.GetComponent<RectTransform>();
+            SetAnchors(rvicRect, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -90), new Vector2(240, 65));
+            victoryPanel.SetActive(false);
+
+            // ================= COMBAT PANEL ================= //
             GameObject combatPanel = CreateUIObject("CombatPanel", canvasGO.transform);
             SetFullStretch(combatPanel.GetComponent<RectTransform>());
             Image panelBg = combatPanel.AddComponent<Image>();
-            panelBg.color = new Color(0.02f, 0.02f, 0.04f, 0.4f); // Subtle dark vignette
+            panelBg.color = new Color(0.02f, 0.02f, 0.04f, 0.4f);
 
-            // 4. Enemy HP Bar (Top Center)
+            // Enemy HP Bar (Top Center)
             GameObject enemyStatusGroup = CreateUIObject("EnemyStatusGroup", combatPanel.transform);
             RectTransform enemyGroupRect = enemyStatusGroup.GetComponent<RectTransform>();
             SetAnchors(enemyGroupRect, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -50), new Vector2(500, 80));
@@ -72,7 +149,7 @@ namespace DungeonCrawler.UI.Editor
             TMP_Text enemyHPText = CreateText("EnemyHPText", enemySlider.transform, "50 / 50", 18, FontStyles.Bold, TextAlignmentOptions.Center);
             SetFullStretch(enemyHPText.GetComponent<RectTransform>());
 
-            // 5. Player HP Bar (Bottom Left)
+            // Player HP Bar (Bottom Left)
             GameObject playerStatusGroup = CreateUIObject("PlayerStatusGroup", combatPanel.transform);
             RectTransform playerGroupRect = playerStatusGroup.GetComponent<RectTransform>();
             SetAnchors(playerGroupRect, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(50, 50), new Vector2(360, 70));
@@ -85,7 +162,7 @@ namespace DungeonCrawler.UI.Editor
             TMP_Text playerHPText = CreateText("PlayerHPText", playerSlider.transform, "HP: 100 / 100", 17, FontStyles.Bold, TextAlignmentOptions.Center);
             SetFullStretch(playerHPText.GetComponent<RectTransform>());
 
-            // 6. Turn Status & Combat Log Texts (Center / Top-mid)
+            // Turn Status & Combat Log Texts
             TMP_Text turnStatusText = CreateText("TurnStatusText", combatPanel.transform, "GILIRANMU!", 34, FontStyles.Bold, TextAlignmentOptions.Center);
             RectTransform turnStatusRect = turnStatusText.GetComponent<RectTransform>();
             SetAnchors(turnStatusRect, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -150), new Vector2(800, 50));
@@ -95,7 +172,7 @@ namespace DungeonCrawler.UI.Editor
             RectTransform combatLogRect = combatLogText.GetComponent<RectTransform>();
             SetAnchors(combatLogRect, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -200), new Vector2(900, 45));
 
-            // 7. Action Menu (Bottom Right)
+            // Action Menu (Bottom Right)
             GameObject actionMenu = CreateUIObject("ActionMenuPanel", combatPanel.transform);
             RectTransform actionMenuRect = actionMenu.GetComponent<RectTransform>();
             SetAnchors(actionMenuRect, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-60, 50), new Vector2(400, 100));
@@ -103,7 +180,7 @@ namespace DungeonCrawler.UI.Editor
             Button attackBtn = CreateButton("AttackButton", actionMenu.transform, "ATTACK (Fisik)", new Color(0.85f, 0.2f, 0.2f), new Vector2(-220, 0), new Vector2(180, 60));
             Button castBtn = CreateButton("CastButton", actionMenu.transform, "CAST (Sihir)", new Color(0.2f, 0.5f, 0.9f), new Vector2(-20, 0), new Vector2(180, 60));
 
-            // 8. Timing Bar Widget (Center)
+            // Timing Bar Widget (Center)
             GameObject timingWidget = CreateUIObject("TimingBarWidget", combatPanel.transform);
             RectTransform timingWidgetRect = timingWidget.GetComponent<RectTransform>();
             SetAnchors(timingWidgetRect, new Vector2(0.5f, 0.4f), new Vector2(0.5f, 0.4f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(600, 150));
@@ -156,7 +233,7 @@ namespace DungeonCrawler.UI.Editor
             timingSO.ApplyModifiedProperties();
             timingWidget.SetActive(false);
 
-            // 9. Typing Widget (Center)
+            // Typing Widget (Center)
             GameObject typingWidget = CreateUIObject("TypingWidget", combatPanel.transform);
             RectTransform typingWidgetRect = typingWidget.GetComponent<RectTransform>();
             SetAnchors(typingWidgetRect, new Vector2(0.5f, 0.4f), new Vector2(0.5f, 0.4f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(650, 160));
@@ -186,7 +263,7 @@ namespace DungeonCrawler.UI.Editor
             typingSO.ApplyModifiedProperties();
             typingWidget.SetActive(false);
 
-            // 10. Wire up CombatUI serialized fields
+            // Wire up CombatUI serialized fields
             SerializedObject uiSO = new SerializedObject(combatUI);
             uiSO.FindProperty("combatPanel").objectReferenceValue = combatPanel;
             uiSO.FindProperty("actionMenuPanel").objectReferenceValue = actionMenu;
@@ -205,7 +282,20 @@ namespace DungeonCrawler.UI.Editor
 
             combatPanel.SetActive(false);
 
-            // 11. Wire CombatManager references on _Managers
+            // Wire up HUDManager serialized fields
+            SerializedObject hudSO = new SerializedObject(hudManager);
+            hudSO.FindProperty("explorationPanel").objectReferenceValue = explorationPanel;
+            hudSO.FindProperty("objectiveText").objectReferenceValue = objectiveText;
+            hudSO.FindProperty("interactionPromptText").objectReferenceValue = promptText;
+            hudSO.FindProperty("keyStatusText").objectReferenceValue = keyStatusText;
+            hudSO.FindProperty("notificationText").objectReferenceValue = notificationText;
+            hudSO.FindProperty("gameOverPanel").objectReferenceValue = gameOverPanel;
+            hudSO.FindProperty("restartGameOverButton").objectReferenceValue = restartGoBtn;
+            hudSO.FindProperty("victoryPanel").objectReferenceValue = victoryPanel;
+            hudSO.FindProperty("restartVictoryButton").objectReferenceValue = restartVicBtn;
+            hudSO.ApplyModifiedProperties();
+
+            // Wire CombatManager references on _Managers
             GameObject managersGO = GameObject.Find("_Managers");
             if (managersGO != null)
             {
@@ -226,7 +316,6 @@ namespace DungeonCrawler.UI.Editor
                     }
 
                     cmSO.ApplyModifiedProperties();
-                    Debug.Log("[CombatUIBuilder] Linked CombatUI and PlayerStats to CombatManager successfully!");
                 }
             }
 
@@ -234,7 +323,7 @@ namespace DungeonCrawler.UI.Editor
                 UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene()
             );
 
-            Debug.Log("[CombatUIBuilder] CombatCanvas UI built and configured successfully!");
+            Debug.Log("[CombatUIBuilder] Built Combat & Exploration HUD with Victory/GameOver panels successfully!");
         }
 
         private static GameObject CreateUIObject(string name, Transform parent)

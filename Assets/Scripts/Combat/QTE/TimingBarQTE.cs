@@ -66,6 +66,9 @@ namespace DungeonCrawler.Combat.QTE
 
         public void StartQTE(KeyCode triggerKey, Action<QTEResult> onComplete, float duration = 0f, string prompt = "Tekan [SPASI] di Sweet Spot!")
         {
+            gameObject.SetActive(true);
+            if (widgetRoot != null) widgetRoot.SetActive(true);
+
             StopAllCoroutines();
 
             currentTriggerKey = triggerKey;
@@ -75,7 +78,6 @@ namespace DungeonCrawler.Combat.QTE
             if (promptText != null) promptText.text = prompt;
             if (resultText != null) resultText.text = "";
 
-            widgetRoot.SetActive(true);
             SetupZoneVisuals();
             isActive = true;
 

@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0123edcb3312cc0418da75a26c33bd58, type: 3}
+  m_Name: BossExecutioner
+  m_EditorClassIdentifier: DungeonCrawler.Data:EnemyData
+  enemyName: Abyssal Executioner
+  maxHealth: 120
+  attackPower: 22
+  isBoss: 1
+  attackTelegraphs:
+  - attackName: Execution Cleave
+    telegraphDuration: 0.9
+    qteWindowDuration: 0.4
+    damageMultiplier: 1.2
+  - attackName: Abyssal Slam
+    telegraphDuration: 1.2
+    qteWindowDuration: 0.35
+    damageMultiplier: 1.5

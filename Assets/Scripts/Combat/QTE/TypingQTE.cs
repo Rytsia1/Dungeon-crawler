@@ -41,6 +41,9 @@ namespace DungeonCrawler.Combat.QTE
 
         public void StartTypingQTE(string word, float timeLimit, Action<bool> onComplete)
         {
+            gameObject.SetActive(true);
+            if (widgetRoot != null) widgetRoot.SetActive(true);
+
             StopAllCoroutines();
 
             targetWord = word.ToUpperInvariant();
@@ -53,7 +56,6 @@ namespace DungeonCrawler.Combat.QTE
             if (promptText != null) promptText.text = "Ketik Mantra Sihir:";
 
             UpdateWordDisplay();
-            widgetRoot.SetActive(true);
             isActive = true;
 
             StartCoroutine(TypingRoutine());
