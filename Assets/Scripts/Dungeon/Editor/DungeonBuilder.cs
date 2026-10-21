@@ -30,17 +30,21 @@ namespace DungeonCrawler.Editor
             Material torchFlameMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Mat_TorchFlame.mat");
             Material enemyBodyMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Mat_EnemyBody.mat");
             Material enemyEyesMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Mat_EnemyEyes.mat");
+            Material keyMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Mat_DungeonKey.mat");
+            Material doorMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Mat_LockedDoor.mat");
 
             // Fallback if anything wasn't loaded
             Shader litShader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
             if (wallMat == null) wallMat = new Material(litShader) { color = new Color(0.35f, 0.38f, 0.42f) };
             if (floorMat == null) floorMat = new Material(litShader) { color = new Color(0.30f, 0.28f, 0.26f) };
             if (ceilingMat == null) ceilingMat = new Material(litShader) { color = new Color(0.15f, 0.15f, 0.18f) };
-
-            Material doorMat = new Material(litShader) { color = new Color(0.32f, 0.18f, 0.10f) };
-            Material keyMat = new Material(litShader) { color = new Color(1f, 0.85f, 0.15f) };
-            keyMat.EnableKeyword("_EMISSION");
-            keyMat.SetColor("_EmissionColor", new Color(1f, 0.85f, 0.15f) * 1.5f);
+            if (doorMat == null) doorMat = new Material(litShader) { color = new Color(0.28f, 0.16f, 0.10f) };
+            if (keyMat == null)
+            {
+                keyMat = new Material(litShader) { color = new Color(1f, 0.85f, 0.15f) };
+                keyMat.EnableKeyword("_EMISSION");
+                keyMat.SetColor("_EmissionColor", new Color(1f, 0.85f, 0.15f) * 2.8f);
+            }
 
             Material rubbleMat = new Material(litShader) { color = new Color(0.22f, 0.22f, 0.24f) };
 
@@ -202,7 +206,9 @@ namespace DungeonCrawler.Editor
 
             EncounterTrigger skelTrigger = skelObj.AddComponent<EncounterTrigger>();
             skelTrigger.Enemy = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/Data/SampleSkeleton.asset");
-            skelObj.AddComponent<EnemyVisualFeedback>();
+            EnemyVisualFeedback skelFeedback = skelObj.AddComponent<EnemyVisualFeedback>();
+            skelTrigger.EnemyObject = skelObj;
+            skelTrigger.VisualFeedback = skelFeedback;
 
             // ================= 6. DUNGEON KEY ================= //
             GameObject oldKey = GameObject.Find("Dungeon_Key");
@@ -284,8 +290,11 @@ namespace DungeonCrawler.Editor
 
             EncounterTrigger bossTrigger = bossObj.AddComponent<EncounterTrigger>();
             bossTrigger.Enemy = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/Data/BossExecutioner.asset");
-            bossObj.AddComponent<EnemyVisualFeedback>();
-            bossObj.AddComponent<BossCombatBehavior>();
+            EnemyVisualFeedback bossFeedback = bossObj.AddComponent<EnemyVisualFeedback>();
+            BossCombatBehavior bossBehavior = bossObj.AddComponent<BossCombatBehavior>();
+            bossTrigger.EnemyObject = bossObj;
+            bossTrigger.VisualFeedback = bossFeedback;
+            bossTrigger.BossBehavior = bossBehavior;
 
             // ================= 9. TORCHES SETUP ================= //
             // Start Room Torches

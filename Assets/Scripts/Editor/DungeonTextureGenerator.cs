@@ -41,6 +41,10 @@ namespace DungeonCrawler.Editor
             CreateColorMaterial("Mat_EnemyBody", new Color(0.10f, 0.10f, 0.12f), 0.05f);
             CreateEmissiveMaterial("Mat_EnemyEyes", new Color(1.0f, 0.05f, 0.05f), 4.5f);
 
+            // Key & Locked Door Materials
+            CreateEmissiveMaterial("Mat_DungeonKey", new Color(1.0f, 0.82f, 0.12f), 2.8f);
+            CreateColorMaterial("Mat_LockedDoor", new Color(0.28f, 0.16f, 0.10f), 0.15f);
+
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 

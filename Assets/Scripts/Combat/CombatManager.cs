@@ -69,7 +69,11 @@ namespace DungeonCrawler.Combat
             }
         }
 
-        public void StartCombat(EnemyData enemy, GameObject enemyGameObject = null)
+        public void StartCombat(
+            EnemyData enemy, 
+            GameObject enemyGameObject = null, 
+            EnemyVisualFeedback visualFeedback = null, 
+            BossCombatBehavior bossBehavior = null)
         {
             if (enemy == null)
             {
@@ -83,19 +87,38 @@ namespace DungeonCrawler.Combat
             activeEnemyObject = enemyGameObject;
             activeEnemyCurrentHealth = enemy.MaxHealth;
 
-            // Fetch visual feedback and boss behavior if available
+            // Fetch visual feedback and boss behavior if supplied or lookup
+            activeVisualFeedback = visualFeedback;
+            activeBossBehavior = bossBehavior;
+
             if (activeEnemyObject != null)
             {
-                activeVisualFeedback = activeEnemyObject.GetComponent<EnemyVisualFeedback>();
-                activeBossBehavior = activeEnemyObject.GetComponent<BossCombatBehavior>();
-            }
-            else
-            {
-                activeVisualFeedback = null;
-                activeBossBehavior = null;
+                if (activeVisualFeedback == null)
+                    activeVisualFeedback = activeEnemyObject.GetComponentInChildren<EnemyVisualFeedback>();
+                if (activeBossBehavior == null)
+                    activeBossBehavior = activeEnemyObject.GetComponentInChildren<BossCombatBehavior>();
+
+                // Automatically rotate player/camera to face straight at the engaged enemy
+                if (Player.PlayerGridController.Instance != null)
+                {
+                    Player.PlayerGridController.Instance.RotateTowards(activeEnemyObject.transform.position, 0.25f);
+                }
+                else
+                {
+                    GameObject playerGO = GameObject.FindGameObjectWithTag("Player");
+                    if (playerGO != null)
+                    {
+                        Vector3 dir = activeEnemyObject.transform.position - playerGO.transform.position;
+                        dir.y = 0;
+                        if (dir.sqrMagnitude > 0.001f)
+                        {
+                            playerGO.transform.rotation = Quaternion.LookRotation(dir);
+                        }
+                    }
+                }
             }
 
-            Debug.Log($"[CombatManager] Combat started against {enemy.EnemyName} (HP: {enemy.MaxHealth}, ATK: {enemy.AttackPower}) | BossBehavior: {activeBossBehavior != null}");
+            Debug.Log($"[CombatManager] Combat started against {enemy.EnemyName} (HP: {enemy.MaxHealth}, ATK: {enemy.AttackPower}) | VisualFeedback: {activeVisualFeedback != null} | BossBehavior: {activeBossBehavior != null}");
 
             if (GameStateManager.Instance != null)
             {
@@ -122,9 +145,25 @@ namespace DungeonCrawler.Combat
             Debug.Log($"[CombatManager] Combat ended. Player won: {playerWon}");
             ChangeCombatState(CombatState.None);
 
-            if (playerWon && activeVisualFeedback != null)
+            if (playerWon)
             {
-                activeVisualFeedback.PlayDeathAnimation();
+                if (activeVisualFeedback != null)
+                {
+                    activeVisualFeedback.PlayDeathAnimation();
+                }
+                else if (activeEnemyObject != null)
+                {
+                    activeEnemyObject.SetActive(false);
+                }
+
+                // Ensure all colliders on activeEnemyObject are disabled so corridor is open
+                if (activeEnemyObject != null)
+                {
+                    foreach (var col in activeEnemyObject.GetComponentsInChildren<Collider>())
+                    {
+                        col.enabled = false;
+                    }
+                }
             }
 
             if (combatUI != null)
@@ -312,7 +351,7 @@ namespace DungeonCrawler.Combat
             // Enemy hit flash & particles visual feedback
             if (activeVisualFeedback != null && damage > 0)
             {
-                bool isCrit = logMessage.Contains("CRITICAL") || logMessage.Contains("MANTRA SUKSES");
+                bool isCrit = logMessage.Contains("CRITICAL") || logMessage.Contains("MANTRA SUKSES") || logMessage.Contains("Perfect") || logMessage.Contains("PERFECT");
                 activeVisualFeedback.PlayHitFeedback(isCrit);
             }
 

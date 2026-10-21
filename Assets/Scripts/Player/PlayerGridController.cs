@@ -11,6 +11,8 @@ namespace DungeonCrawler.Player
     [RequireComponent(typeof(Collider))]
     public class PlayerGridController : MonoBehaviour
     {
+        public static PlayerGridController Instance { get; private set; }
+
         [Header("Grid Movement Settings")]
         [SerializeField] private float stepSize = 2f;
         [SerializeField] private float moveDuration = 0.28f;
@@ -30,6 +32,13 @@ namespace DungeonCrawler.Player
 
         private void Awake()
         {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(this);
+                return;
+            }
+            Instance = this;
+
             if (obstacleLayer.value == 0)
             {
                 obstacleLayer = LayerMask.GetMask("Obstacle");
@@ -42,8 +51,12 @@ namespace DungeonCrawler.Player
         {
             if (isMoving) return;
 
-            // Check GameState: only allow movement when Exploring
+            // Check GameState: strictly only allow movement when Exploring and no combat is running
             if (GameStateManager.Instance != null && GameStateManager.Instance.CurrentState != GameState.Exploring)
+            {
+                return;
+            }
+            if (Combat.CombatManager.Instance != null && Combat.CombatManager.Instance.CurrentCombatState != Combat.CombatState.None)
             {
                 return;
             }
@@ -157,6 +170,45 @@ namespace DungeonCrawler.Player
             Vector3 euler = targetRotation.eulerAngles;
             float snappedY = Mathf.Round(euler.y / 90f) * 90f;
             transform.rotation = Quaternion.Euler(0f, snappedY, 0f);
+            isMoving = false;
+        }
+
+        /// <summary>
+        /// Automatically rotates the player to face towards an enemy or point of interest.
+        /// Snaps rotation to cardinal 90 degree direction to preserve DRPG grid alignment.
+        /// </summary>
+        public void RotateTowards(Vector3 targetWorldPosition, float duration = 0.25f)
+        {
+            Vector3 dir = targetWorldPosition - transform.position;
+            dir.y = 0f;
+            if (dir.sqrMagnitude < 0.001f) return;
+
+            Quaternion lookRot = Quaternion.LookRotation(dir);
+            float angle = lookRot.eulerAngles.y;
+            float snappedY = Mathf.Round(angle / 90f) * 90f;
+            Quaternion snappedRot = Quaternion.Euler(0f, snappedY, 0f);
+
+            StopAllCoroutines();
+            isMoving = false;
+            StartCoroutine(RotateTowardsRoutine(snappedRot, duration));
+        }
+
+        private IEnumerator RotateTowardsRoutine(Quaternion targetRot, float duration)
+        {
+            isMoving = true;
+            Quaternion startRot = transform.rotation;
+            float elapsed = 0f;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                float smoothT = Mathf.SmoothStep(0f, 1f, t);
+                transform.rotation = Quaternion.Slerp(startRot, targetRot, smoothT);
+                yield return null;
+            }
+
+            transform.rotation = targetRot;
             isMoving = false;
         }
 

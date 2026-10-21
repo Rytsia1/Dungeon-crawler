@@ -1,6 +1,7 @@
 using UnityEngine;
 using DungeonCrawler.Core;
 using DungeonCrawler.Combat;
+using DungeonCrawler.Combat.Boss;
 using DungeonCrawler.Data;
 
 namespace DungeonCrawler.Dungeon
@@ -12,12 +13,56 @@ namespace DungeonCrawler.Dungeon
         [SerializeField] private EnemyData enemyData;
         [SerializeField] private bool disableGameObjectOnTrigger = false;
 
+        [Header("Enemy 3D References (Auto-resolved if null)")]
+        [SerializeField] private GameObject enemyObject;
+        [SerializeField] private EnemyVisualFeedback visualFeedback;
+        [SerializeField] private BossCombatBehavior bossBehavior;
+
         private bool hasTriggered = false;
 
         public EnemyData Enemy
         {
             get => enemyData;
             set => enemyData = value;
+        }
+
+        public GameObject EnemyObject
+        {
+            get => enemyObject;
+            set => enemyObject = value;
+        }
+
+        public EnemyVisualFeedback VisualFeedback
+        {
+            get => visualFeedback;
+            set => visualFeedback = value;
+        }
+
+        public BossCombatBehavior BossBehavior
+        {
+            get => bossBehavior;
+            set => bossBehavior = value;
+        }
+
+        private void Awake()
+        {
+            ResolveReferences();
+        }
+
+        private void ResolveReferences()
+        {
+            if (enemyObject == null)
+            {
+                enemyObject = gameObject;
+            }
+            if (visualFeedback == null && enemyObject != null)
+            {
+                visualFeedback = enemyObject.GetComponentInChildren<EnemyVisualFeedback>();
+            }
+            if (bossBehavior == null && enemyObject != null)
+            {
+                bossBehavior = enemyObject.GetComponentInChildren<BossCombatBehavior>();
+            }
         }
 
         private void OnTriggerEnter(Collider other)
@@ -36,24 +81,26 @@ namespace DungeonCrawler.Dungeon
             if (hasTriggered) return;
             hasTriggered = true;
 
-            Debug.Log($"[EncounterTrigger] Player encountered enemy on '{gameObject.name}'!");
+            ResolveReferences();
+
+            Debug.Log($"[EncounterTrigger] Player encountered enemy on '{gameObject.name}'! (Enemy: {(enemyData != null ? enemyData.EnemyName : "null")})");
 
             if (enemyData == null)
             {
                 Debug.LogWarning("[EncounterTrigger] EnemyData is null on this trigger!");
             }
 
-            // Start Combat
+            // Start Combat with all references provided
             if (CombatManager.Instance != null)
             {
-                CombatManager.Instance.StartCombat(enemyData, gameObject);
+                CombatManager.Instance.StartCombat(enemyData, enemyObject, visualFeedback, bossBehavior);
             }
             else if (GameStateManager.Instance != null)
             {
                 GameStateManager.Instance.ChangeState(GameState.Combat);
             }
 
-            // Disable collider so it doesn't re-trigger
+            // Disable trigger collider so it doesn't re-trigger
             Collider col = GetComponent<Collider>();
             if (col != null)
             {

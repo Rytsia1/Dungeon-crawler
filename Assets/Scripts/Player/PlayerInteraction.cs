@@ -32,8 +32,16 @@ namespace DungeonCrawler.Player
 
         private void Update()
         {
-            // Only allow interaction while Exploring
+            // Only allow interaction while strictly Exploring and not in combat
             if (GameStateManager.Instance != null && GameStateManager.Instance.CurrentState != GameState.Exploring)
+            {
+                if (currentInteractable != null)
+                {
+                    ClearCurrentInteractable();
+                }
+                return;
+            }
+            if (Combat.CombatManager.Instance != null && Combat.CombatManager.Instance.CurrentCombatState != Combat.CombatState.None)
             {
                 if (currentInteractable != null)
                 {

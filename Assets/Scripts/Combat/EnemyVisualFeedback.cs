@@ -148,6 +148,13 @@ namespace DungeonCrawler.Combat
             if (isDying) return;
             isDying = true;
 
+            // Immediately disable all colliders so corridor/room is unblocked
+            Collider[] colliders = GetComponentsInChildren<Collider>();
+            foreach (var col in colliders)
+            {
+                col.enabled = false;
+            }
+
             StopAllCoroutines();
             StartCoroutine(DeathRoutine(onFinished));
         }
