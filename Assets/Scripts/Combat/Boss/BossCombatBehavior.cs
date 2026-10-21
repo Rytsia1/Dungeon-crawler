@@ -19,6 +19,13 @@ namespace DungeonCrawler.Combat.Boss
 
         private int patternTurnIndex = 0;
 
+        private void OnValidate()
+        {
+            if (flurryHits < 1) flurryHits = 1;
+            if (flurryDelay < 0.05f) flurryDelay = 0.05f;
+            if (cleaveDuration < 0.2f) cleaveDuration = 0.2f;
+        }
+
         private void Awake()
         {
             SetupCleaveCurve();
@@ -72,13 +79,15 @@ namespace DungeonCrawler.Combat.Boss
             int basePower, 
             Action<int, string> onComplete)
         {
-            Debug.Log("[BossCombatBehavior] Boss executing 'Executioner's Flurry' (3-Hit Combo)!");
+            Debug.Log($"[BossCombatBehavior] Boss executing 'Executioner's Flurry' ({flurryHits}-Hit Combo)!");
 
             AudioManager.Instance?.PlaySFX(SFXType.SwordSwing, 0.8f);
 
             int perHitDamage = Mathf.Max(1, Mathf.RoundToInt(basePower / (float)flurryHits));
             int totalDamageTaken = 0;
-            int successfulParries = 0;
+            int perfectCount = 0;
+            int goodCount = 0;
+            int missCount = 0;
 
             bool isDone = false;
 
@@ -89,15 +98,23 @@ namespace DungeonCrawler.Combat.Boss
                 {
                     for (int i = 0; i < results.Length; i++)
                     {
-                        if (results[i])
+                        switch (results[i])
                         {
-                            successfulParries++;
-                            AudioManager.Instance?.PlaySFX(SFXType.Parry, 0.9f);
-                        }
-                        else
-                        {
-                            totalDamageTaken += perHitDamage;
-                            AudioManager.Instance?.PlaySFX(SFXType.Damage, 0.7f);
+                            case QTEResult.Perfect:
+                                perfectCount++;
+                                AudioManager.Instance?.PlaySFX(SFXType.Parry, 0.9f);
+                                break;
+                            case QTEResult.Good:
+                                goodCount++;
+                                totalDamageTaken += Mathf.RoundToInt(perHitDamage * 0.5f);
+                                AudioManager.Instance?.PlaySFX(SFXType.Damage, 0.6f);
+                                break;
+                            case QTEResult.Miss:
+                            default:
+                                missCount++;
+                                totalDamageTaken += perHitDamage;
+                                AudioManager.Instance?.PlaySFX(SFXType.Damage, 0.8f);
+                                break;
                         }
                     }
                     isDone = true;
@@ -109,9 +126,9 @@ namespace DungeonCrawler.Combat.Boss
 
             while (!isDone) yield return null;
 
-            string log = successfulParries == flurryHits
-                ? "<color=#00FF66>SEMPURNA!</color> Semua 3 ayunan Executioner's Flurry berhasil ditangkis (0 damage)!"
-                : $"<color=#FF5555>FLURRY HITS!</color> Berhasil menahan {successfulParries}/{flurryHits} tebasan. Menerima {totalDamageTaken} damage!";
+            string log = perfectCount == flurryHits
+                ? $"<color=#00FF66>SEMPURNA!</color> Semua {flurryHits} tebasan Executioner's Flurry ditangkis sempurna (0 damage)!"
+                : $"<color=#FF5555>FLURRY RESOLVED!</color> {perfectCount} Parry (0 dmg), {goodCount} Guard (50% dmg), {missCount} Kena. Menerima {totalDamageTaken} damage!";
 
             if (totalDamageTaken > 0)
             {

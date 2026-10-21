@@ -130,12 +130,12 @@ namespace DungeonCrawler.Combat.QTE
 
         /// <summary>
         /// Starts a multi-hit QTE sequence (e.g. Boss Flurry attack).
-        /// Calls onFinished with an array of booleans indicating success (Good/Perfect) per swing.
+        /// Calls onFinished with an array of QTEResult (Perfect, Good, Miss) per swing.
         /// </summary>
         public void StartMultiQTE(
             int hitCount, 
             float delayBetween, 
-            Action<bool[]> onFinished,
+            Action<QTEResult[]> onFinished,
             KeyCode triggerKey = KeyCode.Space,
             float singleDuration = 0.85f,
             string promptPrefix = "MULTI-PARRY! Tekan [SPASI]!")
@@ -153,11 +153,11 @@ namespace DungeonCrawler.Combat.QTE
         private IEnumerator RunMultiQTERoutine(
             int hitCount, 
             float delayBetween, 
-            Action<bool[]> onFinished, 
+            Action<QTEResult[]> onFinished, 
             float singleDuration, 
             string promptPrefix)
         {
-            bool[] results = new bool[hitCount];
+            QTEResult[] results = new QTEResult[hitCount];
             SetupZoneVisuals();
 
             for (int i = 0; i < hitCount; i++)
@@ -190,13 +190,23 @@ namespace DungeonCrawler.Combat.QTE
 
                 if (!hitRegistered) hitResult = QTEResult.Miss;
 
-                results[i] = (hitResult == QTEResult.Good || hitResult == QTEResult.Perfect);
+                results[i] = hitResult;
 
                 if (resultText != null)
                 {
-                    resultText.text = results[i] 
-                        ? (hitResult == QTEResult.Perfect ? "<color=#00FF66>PARRY!</color>" : "<color=#FFFF00>BLOCK!</color>")
-                        : "<color=#FF3333>HIT!</color>";
+                    switch (hitResult)
+                    {
+                        case QTEResult.Perfect:
+                            resultText.text = "<color=#00FF66>PARRY!</color>";
+                            break;
+                        case QTEResult.Good:
+                            resultText.text = "<color=#FFFF00>BLOCK!</color>";
+                            break;
+                        case QTEResult.Miss:
+                        default:
+                            resultText.text = "<color=#FF3333>HIT!</color>";
+                            break;
+                    }
                 }
 
                 yield return new WaitForSeconds(delayBetween);

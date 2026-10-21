@@ -57,5 +57,11 @@ namespace DungeonCrawler.Data
         }
 
         public List<EnemyAttackTelegraph> AttackTelegraphs => attackTelegraphs;
+
+        private void OnValidate()
+        {
+            if (maxHealth < 1) maxHealth = 1;
+            if (attackPower < 1) attackPower = 1;
+        }
     }
 }

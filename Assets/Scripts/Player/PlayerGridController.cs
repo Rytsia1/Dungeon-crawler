@@ -13,11 +13,15 @@ namespace DungeonCrawler.Player
     {
         public static PlayerGridController Instance { get; private set; }
 
+        public const float GRID_STEP_SIZE = 2f;
+
         [Header("Grid Movement Settings")]
-        [SerializeField] private float stepSize = 2f;
+        [SerializeField] private float stepSize = GRID_STEP_SIZE;
         [SerializeField] private float moveDuration = 0.28f;
         [SerializeField] private float stepBufferDelay = 0.06f; // Buffer delay between continuous steps
         [SerializeField] private float rotateDuration = 0.2f;
+
+        public float StepSize => stepSize;
 
         [Header("Collision & Raycast")]
         [SerializeField] private LayerMask obstacleLayer;
@@ -30,6 +34,11 @@ namespace DungeonCrawler.Player
 
         private bool isMoving = false;
         public bool IsMoving => isMoving;
+
+        private Coroutine moveCoroutine;
+        private Coroutine rotateCoroutine;
+        private Coroutine bumpCoroutine;
+        private Vector3 targetMovePosition;
 
         private void Awake()
         {
@@ -45,6 +54,7 @@ namespace DungeonCrawler.Player
                 obstacleLayer = LayerMask.GetMask("Obstacle");
             }
 
+            targetMovePosition = transform.position;
             SnapToGrid();
         }
 
@@ -106,13 +116,13 @@ namespace DungeonCrawler.Player
             {
                 TryMove(-transform.forward);
             }
-            else if (turnLeft)
+            else if (turnLeft && rotateCoroutine == null)
             {
-                StartCoroutine(RotateRoutine(-90f));
+                rotateCoroutine = StartCoroutine(RotateRoutine(-90f));
             }
-            else if (turnRight)
+            else if (turnRight && rotateCoroutine == null)
             {
-                StartCoroutine(RotateRoutine(90f));
+                rotateCoroutine = StartCoroutine(RotateRoutine(90f));
             }
         }
 
@@ -124,20 +134,21 @@ namespace DungeonCrawler.Player
             if (Physics.Raycast(origin, direction, out RaycastHit hit, checkDistance, obstacleLayer))
             {
                 Debug.Log($"[PlayerGridController] Obstacle detected ahead ({hit.collider.name}). Movement blocked.");
-                if (enableWallBump)
+                if (enableWallBump && bumpCoroutine == null)
                 {
-                    StartCoroutine(BumpRoutine(direction));
+                    bumpCoroutine = StartCoroutine(BumpRoutine(direction));
                 }
                 return;
             }
 
-            Vector3 targetPosition = transform.position + direction * stepSize;
-            StartCoroutine(MoveRoutine(targetPosition));
+            targetMovePosition = transform.position + direction * stepSize;
+            moveCoroutine = StartCoroutine(MoveRoutine(targetMovePosition));
         }
 
         private IEnumerator MoveRoutine(Vector3 targetPosition)
         {
             isMoving = true;
+            targetMovePosition = targetPosition;
             Vector3 startPosition = transform.position;
             float elapsed = 0f;
 
@@ -162,7 +173,8 @@ namespace DungeonCrawler.Player
                 yield return new WaitForSeconds(stepBufferDelay);
             }
 
-            isMoving = false;
+            moveCoroutine = null;
+            isMoving = (rotateCoroutine != null || bumpCoroutine != null);
         }
 
         private IEnumerator RotateRoutine(float angle)
@@ -184,27 +196,56 @@ namespace DungeonCrawler.Player
             Vector3 euler = targetRotation.eulerAngles;
             float snappedY = Mathf.Round(euler.y / 90f) * 90f;
             transform.rotation = Quaternion.Euler(0f, snappedY, 0f);
-            isMoving = false;
+            rotateCoroutine = null;
+            isMoving = (moveCoroutine != null || bumpCoroutine != null);
         }
 
         /// <summary>
         /// Automatically rotates the player to face towards an enemy or point of interest.
         /// Snaps rotation to cardinal 90 degree direction to preserve DRPG grid alignment.
+        /// If moving when called (e.g. combat trigger during step), finishes the step and snaps to grid first.
         /// </summary>
         public void RotateTowards(Vector3 targetWorldPosition, float duration = 0.25f)
         {
+            // 1. Force finish movement if in progress
+            if (moveCoroutine != null || isMoving)
+            {
+                if (moveCoroutine != null)
+                {
+                    StopCoroutine(moveCoroutine);
+                    moveCoroutine = null;
+                }
+                // Force complete position to target grid position and snap cleanly
+                transform.position = SnapPosition(targetMovePosition);
+            }
+
+            if (bumpCoroutine != null)
+            {
+                StopCoroutine(bumpCoroutine);
+                bumpCoroutine = null;
+                transform.position = SnapPosition(transform.position);
+            }
+
+            if (rotateCoroutine != null)
+            {
+                StopCoroutine(rotateCoroutine);
+                rotateCoroutine = null;
+            }
+
             Vector3 dir = targetWorldPosition - transform.position;
             dir.y = 0f;
-            if (dir.sqrMagnitude < 0.001f) return;
+            if (dir.sqrMagnitude < 0.001f)
+            {
+                isMoving = false;
+                return;
+            }
 
             Quaternion lookRot = Quaternion.LookRotation(dir);
             float angle = lookRot.eulerAngles.y;
             float snappedY = Mathf.Round(angle / 90f) * 90f;
             Quaternion snappedRot = Quaternion.Euler(0f, snappedY, 0f);
 
-            StopAllCoroutines();
-            isMoving = false;
-            StartCoroutine(RotateTowardsRoutine(snappedRot, duration));
+            rotateCoroutine = StartCoroutine(RotateTowardsRoutine(snappedRot, duration));
         }
 
         private IEnumerator RotateTowardsRoutine(Quaternion targetRot, float duration)
@@ -223,6 +264,7 @@ namespace DungeonCrawler.Player
             }
 
             transform.rotation = targetRot;
+            rotateCoroutine = null;
             isMoving = false;
         }
 
@@ -255,7 +297,8 @@ namespace DungeonCrawler.Player
             }
 
             transform.position = originalPos;
-            isMoving = false;
+            bumpCoroutine = null;
+            isMoving = (moveCoroutine != null || rotateCoroutine != null);
         }
 
         private void SnapToGrid()

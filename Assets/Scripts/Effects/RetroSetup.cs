@@ -21,6 +21,10 @@ namespace DungeonCrawler.Effects
         private void Awake()
         {
             targetCamera = GetComponent<Camera>();
+        }
+
+        private void OnEnable()
+        {
             if (enableRetroResolution)
             {
                 SetupRetroDisplay();
@@ -35,6 +39,14 @@ namespace DungeonCrawler.Effects
         public void SetupRetroDisplay()
         {
             if (targetCamera == null) targetCamera = GetComponent<Camera>();
+
+            // Prevent duplicating resources if already initialized
+            if (retroTexture != null && blitCamGO != null && retroCanvasGO != null)
+            {
+                return;
+            }
+
+            Cleanup();
 
             // Create low-resolution Point-filtered RenderTexture
             retroTexture = new RenderTexture(targetWidth, targetHeight, 24, RenderTextureFormat.ARGB32)

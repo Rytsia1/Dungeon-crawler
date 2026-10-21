@@ -79,26 +79,31 @@ namespace DungeonCrawler.Dungeon
         public void TriggerEncounter()
         {
             if (hasTriggered) return;
-            hasTriggered = true;
 
             ResolveReferences();
 
-            Debug.Log($"[EncounterTrigger] Player encountered enemy on '{gameObject.name}'! (Enemy: {(enemyData != null ? enemyData.EnemyName : "null")})");
-
             if (enemyData == null)
             {
-                Debug.LogWarning("[EncounterTrigger] EnemyData is null on this trigger!");
+                Debug.LogError($"[EncounterTrigger] Cannot trigger encounter on '{gameObject.name}': EnemyData is null!");
+                return;
             }
 
-            // Start Combat with all references provided
-            if (CombatManager.Instance != null)
+            if (CombatManager.Instance == null)
             {
-                CombatManager.Instance.StartCombat(enemyData, enemyObject, visualFeedback, bossBehavior);
+                Debug.LogError($"[EncounterTrigger] Cannot trigger encounter on '{gameObject.name}': CombatManager.Instance is null!");
+                return;
             }
-            else if (GameStateManager.Instance != null)
+
+            // Start Combat with all references provided and verify success
+            bool started = CombatManager.Instance.StartCombat(enemyData, enemyObject, visualFeedback, bossBehavior);
+            if (!started)
             {
-                GameStateManager.Instance.ChangeState(GameState.Combat);
+                Debug.LogWarning($"[EncounterTrigger] StartCombat returned false for '{gameObject.name}'. Trigger remains unconsumed.");
+                return;
             }
+
+            hasTriggered = true;
+            Debug.Log($"[EncounterTrigger] Encounter successfully started on '{gameObject.name}'! (Enemy: {enemyData.EnemyName})");
 
             // Disable trigger collider so it doesn't re-trigger
             Collider col = GetComponent<Collider>();

@@ -69,19 +69,31 @@ namespace DungeonCrawler.Combat
             }
         }
 
-        public void StartCombat(
+        public bool StartCombat(
             EnemyData enemy, 
             GameObject enemyGameObject = null, 
             EnemyVisualFeedback visualFeedback = null, 
             BossCombatBehavior bossBehavior = null)
         {
+            FindReferences();
+
             if (enemy == null)
             {
                 Debug.LogError("[CombatManager] Cannot start combat: EnemyData is null!");
-                return;
+                return false;
             }
 
-            FindReferences();
+            if (enemy.MaxHealth <= 0)
+            {
+                Debug.LogError($"[CombatManager] Cannot start combat: Enemy '{enemy.EnemyName}' has invalid MaxHealth ({enemy.MaxHealth})!");
+                return false;
+            }
+
+            if (combatUI == null)
+            {
+                Debug.LogError("[CombatManager] Cannot start combat: CombatUI is null in the scene!");
+                return false;
+            }
 
             activeEnemy = enemy;
             activeEnemyObject = enemyGameObject;
@@ -125,19 +137,17 @@ namespace DungeonCrawler.Combat
                 GameStateManager.Instance.ChangeState(GameState.Combat);
             }
 
-            if (combatUI != null)
+            combatUI.ShowCombatUI(true);
+            combatUI.UpdateEnemyHealth(activeEnemyCurrentHealth, enemy.MaxHealth, enemy.EnemyName);
+            if (playerStats != null)
             {
-                combatUI.ShowCombatUI(true);
-                combatUI.UpdateEnemyHealth(activeEnemyCurrentHealth, enemy.MaxHealth, enemy.EnemyName);
-                if (playerStats != null)
-                {
-                    combatUI.UpdatePlayerHealth(playerStats.CurrentHealth, playerStats.MaxHealth);
-                }
-                combatUI.SetCombatLog($"Pertarungan dimulai melawan {enemy.EnemyName}!");
+                combatUI.UpdatePlayerHealth(playerStats.CurrentHealth, playerStats.MaxHealth);
             }
+            combatUI.SetCombatLog($"Pertarungan dimulai melawan {enemy.EnemyName}!");
 
             OnCombatStarted?.Invoke(enemy);
             StartPlayerTurn();
+            return true;
         }
 
         public void EndCombat(bool playerWon)
@@ -254,6 +264,11 @@ namespace DungeonCrawler.Combat
                     OnPlayerAttackQTEComplete(QTEResult.Good);
                 }
             }
+            else
+            {
+                Debug.LogWarning("[CombatManager] CombatUI is null in ExecutePlayerAttack. Auto-completing attack with fallback.");
+                OnPlayerAttackQTEComplete(QTEResult.Good);
+            }
         }
 
         private void OnPlayerAttackQTEComplete(QTEResult result)
@@ -315,6 +330,11 @@ namespace DungeonCrawler.Combat
                 {
                     OnPlayerCastQTEComplete(true);
                 }
+            }
+            else
+            {
+                Debug.LogWarning("[CombatManager] CombatUI is null in ExecutePlayerCast. Auto-completing cast with fallback.");
+                OnPlayerCastQTEComplete(true);
             }
         }
 
@@ -381,64 +401,93 @@ namespace DungeonCrawler.Combat
 
             ChangeCombatState(CombatState.EnemyTurn_Telegraph);
 
-            if (combatUI != null)
-            {
-                combatUI.SetTurnStatus($"<color=#FF5555>PERINGATAN!</color> {activeEnemy.EnemyName} bersiap menyerang!");
-            }
-
-            // Telegraph windup delay (~0.8s)
-            yield return new WaitForSeconds(0.8f);
-
-            ChangeCombatState(CombatState.EnemyTurn_DefendQTE);
-
             if (activeBossBehavior != null)
-            {
-                // Specialized Boss Attack Pattern (Multi-hit Flurry or Delayed Cleave)
-                if (combatUI != null) combatUI.SetTurnStatus("<color=#FF0000>SERANGAN BOSS!</color>");
-                activeBossBehavior.ExecuteBossAttack(combatUI != null ? combatUI.TimingBar : null, activeEnemy.AttackPower, OnEnemyAttackResolved);
-            }
-            else
             {
                 if (combatUI != null)
                 {
-                    combatUI.SetTurnStatus("BERTAHAN! Tekan [SPASI] di Sweet Spot!");
+                    combatUI.SetTurnStatus("<color=#FF0000>PERINGATAN! BOSS BERSIAP MENYERANG!</color>");
+                }
 
-                    if (combatUI.TimingBar != null)
+                // Telegraph windup delay (~0.8s)
+                yield return new WaitForSeconds(0.8f);
+
+                ChangeCombatState(CombatState.EnemyTurn_DefendQTE);
+                if (combatUI != null) combatUI.SetTurnStatus("<color=#FF0000>SERANGAN BOSS!</color>");
+                activeBossBehavior.ExecuteBossAttack(combatUI != null ? combatUI.TimingBar : null, activeEnemy != null ? activeEnemy.AttackPower : 15, OnEnemyAttackResolved);
+            }
+            else
+            {
+                // Select attack telegraph from enemy data if available
+                EnemyAttackTelegraph telegraph = null;
+                if (activeEnemy != null && activeEnemy.AttackTelegraphs != null && activeEnemy.AttackTelegraphs.Count > 0)
+                {
+                    int randIdx = UnityEngine.Random.Range(0, activeEnemy.AttackTelegraphs.Count);
+                    telegraph = activeEnemy.AttackTelegraphs[randIdx];
+                }
+
+                string attackName = telegraph != null && !string.IsNullOrEmpty(telegraph.attackName)
+                    ? telegraph.attackName
+                    : "Serangan";
+                float telegraphDuration = telegraph != null ? Mathf.Max(0.2f, telegraph.telegraphDuration) : 0.8f;
+                float qteWindow = telegraph != null ? Mathf.Max(0.3f, telegraph.qteWindowDuration) : 1.1f;
+                float multiplier = telegraph != null ? telegraph.damageMultiplier : 1.0f;
+                int basePower = activeEnemy != null ? activeEnemy.AttackPower : 10;
+                int effectivePower = Mathf.Max(1, Mathf.RoundToInt(basePower * multiplier));
+
+                if (combatUI != null)
+                {
+                    combatUI.SetTurnStatus($"<color=#FF5555>PERINGATAN!</color> {activeEnemy?.EnemyName ?? "Musuh"} bersiap melancarkan [{attackName}]!");
+                }
+
+                yield return new WaitForSeconds(telegraphDuration);
+
+                ChangeCombatState(CombatState.EnemyTurn_DefendQTE);
+
+                if (combatUI != null && combatUI.TimingBar != null)
+                {
+                    combatUI.SetTurnStatus($"BERTAHAN DARI [{attackName}]! Tekan [SPASI] di Sweet Spot!");
+                    combatUI.TimingBar.StartQTE(KeyCode.Space, (res) => OnEnemyAttackDefended(res, effectivePower, attackName), qteWindow, $"PARRY / BLOCK [{attackName}]! Tekan [SPASI]!");
+                }
+                else
+                {
+                    if (combatUI != null)
                     {
-                        combatUI.TimingBar.StartQTE(KeyCode.Space, OnEnemyAttackDefended, 1.1f, "PARRY / BLOCK! Tekan [SPASI]!");
+                        combatUI.SetTurnStatus($"BERTAHAN DARI [{attackName}]! Menahan serangan...");
                     }
                     else
                     {
-                        OnEnemyAttackDefended(QTEResult.Miss);
+                        Debug.LogWarning("[CombatManager] CombatUI is null in TransitionToEnemyTurn. Falling back to default defense resolution.");
                     }
+                    OnEnemyAttackDefended(QTEResult.Miss, effectivePower, attackName);
                 }
             }
         }
 
-        private void OnEnemyAttackDefended(QTEResult defenseResult)
+        private void OnEnemyAttackDefended(QTEResult defenseResult, int enemyPower, string attackName = "")
         {
-            int enemyPower = activeEnemy != null ? activeEnemy.AttackPower : 10;
             int incomingDamage = 0;
+            string prefix = !string.IsNullOrEmpty(attackName) ? $"[{attackName}] " : "";
             string defenseLog = "";
 
             switch (defenseResult)
             {
                 case QTEResult.Perfect:
                     incomingDamage = 0;
-                    defenseLog = "<color=#00FF66>PERFECT PARRY!</color> Serangan musuh ditangkis sempurna (0 damage)!";
+                    defenseLog = $"<color=#00FF66>PERFECT PARRY!</color> {prefix}Serangan musuh ditangkis sempurna (0 damage)!";
                     CameraJuice.Instance?.HitStop(0.07f);
                     CameraJuice.Instance?.ShakeCamera(0.16f, 0.12f);
                     AudioManager.Instance?.PlaySFX(SFXType.Parry, 1f);
                     break;
                 case QTEResult.Good:
                     incomingDamage = Mathf.RoundToInt(enemyPower * 0.5f);
-                    defenseLog = $"<color=#FFFF00>GUARD BLOCKED!</color> Menahan sebagian serangan ({incomingDamage} damage).";
+                    defenseLog = $"<color=#FFFF00>GUARD BLOCKED!</color> {prefix}Menahan sebagian serangan ({incomingDamage} damage).";
                     CameraJuice.Instance?.ShakeCamera(0.12f, 0.08f);
                     AudioManager.Instance?.PlaySFX(SFXType.Damage, 0.65f);
                     break;
                 case QTEResult.Miss:
+                default:
                     incomingDamage = enemyPower;
-                    defenseLog = $"<color=#FF3333>DEFENSE FAILED!</color> Terkena serangan penuh ({incomingDamage} damage)!";
+                    defenseLog = $"<color=#FF3333>DEFENSE FAILED!</color> {prefix}Terkena serangan penuh ({incomingDamage} damage)!";
                     CameraJuice.Instance?.ShakeCamera(0.3f, 0.25f);
                     AudioManager.Instance?.PlaySFX(SFXType.Damage, 1f);
                     break;

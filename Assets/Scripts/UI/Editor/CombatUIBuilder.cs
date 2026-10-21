@@ -373,7 +373,7 @@ namespace DungeonCrawler.UI.Editor
         {
             GameObject btnGO = CreateUIObject(name, parent);
             RectTransform rt = btnGO.GetComponent<RectTransform>();
-            SetAnchors(rt, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0.5f, 0.5f), pos, size);
+            SetAnchors(rt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), pos, size);
 
             Image img = btnGO.AddComponent<Image>();
             img.color = color;

@@ -10,7 +10,7 @@ namespace DungeonCrawler.Map
         public static DungeonMapManager Instance { get; private set; }
 
         [Header("Grid Configuration")]
-        [SerializeField] private float stepSize = 2f;
+        [SerializeField] private float stepSize = PlayerGridController.GRID_STEP_SIZE;
         [SerializeField] private int sightDistance = 1; // Number of tiles revealed ahead
 
         [Header("Runtime State")]
@@ -23,7 +23,7 @@ namespace DungeonCrawler.Map
 
         public Vector2Int CurrentGridPosition => currentGridPosition;
         public float CurrentRotationY => currentRotationY;
-        public float StepSize => stepSize;
+        public float StepSize => (playerController != null ? playerController.StepSize : (PlayerGridController.Instance != null ? PlayerGridController.Instance.StepSize : PlayerGridController.GRID_STEP_SIZE));
         public IReadOnlyCollection<Vector2Int> VisitedTiles => visitedTiles;
 
         /// <summary>
@@ -45,7 +45,29 @@ namespace DungeonCrawler.Map
         private void Start()
         {
             FindPlayer();
+            SyncGridSettings();
+            if (playerTransform != null)
+            {
+                currentGridPosition = WorldToGrid(playerTransform.position);
+                currentRotationY = Mathf.Round(playerTransform.eulerAngles.y / 90f) * 90f;
+            }
             UpdatePlayerMapState(true);
+        }
+
+        private void SyncGridSettings()
+        {
+            if (playerController != null)
+            {
+                stepSize = playerController.StepSize;
+            }
+            else if (PlayerGridController.Instance != null)
+            {
+                stepSize = PlayerGridController.Instance.StepSize;
+            }
+            else
+            {
+                stepSize = PlayerGridController.GRID_STEP_SIZE;
+            }
         }
 
         private void Update()
@@ -85,14 +107,16 @@ namespace DungeonCrawler.Map
 
         public Vector2Int WorldToGrid(Vector3 worldPos)
         {
-            int gridX = Mathf.RoundToInt(worldPos.x / stepSize);
-            int gridY = Mathf.RoundToInt(worldPos.z / stepSize);
+            float size = StepSize;
+            int gridX = Mathf.RoundToInt(worldPos.x / size);
+            int gridY = Mathf.RoundToInt(worldPos.z / size);
             return new Vector2Int(gridX, gridY);
         }
 
         public Vector3 GridToWorld(Vector2Int gridPos, float y = 0f)
         {
-            return new Vector3(gridPos.x * stepSize, y, gridPos.y * stepSize);
+            float size = StepSize;
+            return new Vector3(gridPos.x * size, y, gridPos.y * size);
         }
 
         public bool IsTileVisited(Vector2Int gridPos)
