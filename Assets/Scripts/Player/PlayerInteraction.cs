@@ -12,13 +12,18 @@ namespace DungeonCrawler.Player
     public class PlayerInteraction : MonoBehaviour
     {
         [Header("Settings")]
-        [SerializeField] private float interactDistance = 2.5f;
+        [SerializeField] private float interactDistance = 3.0f;
         [SerializeField] private LayerMask interactLayer = ~0; // Everything by default
         [SerializeField] private Camera playerCamera;
 
         private IInteractable currentInteractable = null;
 
         private void Awake()
+        {
+            ResolveCamera();
+        }
+
+        private void ResolveCamera()
         {
             if (playerCamera == null)
             {
@@ -56,10 +61,28 @@ namespace DungeonCrawler.Player
 
         private void CheckForInteractable()
         {
-            if (playerCamera == null) return;
+            if (playerCamera == null)
+            {
+                ResolveCamera();
+                if (playerCamera == null) return;
+            }
 
             Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
-            if (Physics.Raycast(ray, out RaycastHit hit, interactDistance, interactLayer))
+            bool hitFound = false;
+            RaycastHit hit;
+
+            // 1. First try direct raycast
+            if (Physics.Raycast(ray, out hit, interactDistance, interactLayer, QueryTriggerInteraction.Collide))
+            {
+                hitFound = true;
+            }
+            // 2. Fallback to SphereCast with radius 0.45m for responsive pickup without pixel-hunting
+            else if (Physics.SphereCast(ray, 0.45f, out hit, interactDistance, interactLayer, QueryTriggerInteraction.Collide))
+            {
+                hitFound = true;
+            }
+
+            if (hitFound)
             {
                 IInteractable interactable = hit.collider.GetComponentInParent<IInteractable>();
                 if (interactable != null)

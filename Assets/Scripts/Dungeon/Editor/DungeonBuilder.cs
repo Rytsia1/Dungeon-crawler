@@ -217,9 +217,21 @@ namespace DungeonCrawler.Editor
             GameObject keyObj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             keyObj.name = "Dungeon_Key";
             keyObj.transform.SetParent(propsGroup.transform);
-            keyObj.transform.position = new Vector3(3f * 2f, 0.8f, 6f * 2f);
-            keyObj.transform.localScale = new Vector3(0.45f, 0.45f, 0.45f);
+            keyObj.transform.position = new Vector3(3f * 2f, 1.2f, 6f * 2f); // Eye level (1.2f)
+            keyObj.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
             keyObj.GetComponent<Renderer>().sharedMaterial = keyMat;
+
+            int interactableLayer = LayerMask.NameToLayer("Interactable");
+            if (interactableLayer == -1) interactableLayer = 0;
+            keyObj.layer = interactableLayer;
+
+            SphereCollider sc = keyObj.GetComponent<SphereCollider>();
+            if (sc != null)
+            {
+                sc.radius = 0.8f;
+                sc.isTrigger = false;
+            }
+
             keyObj.AddComponent<KeyPickup>();
 
             // Small golden light around key

@@ -49,6 +49,10 @@ namespace DungeonCrawler.Map
             if (obstacleLayer.value == 0)
             {
                 obstacleLayer = LayerMask.GetMask("Obstacle");
+                if (obstacleLayer.value == 0)
+                {
+                    obstacleLayer = 1 << 8; // Layer 8 is Obstacle
+                }
             }
 
             BuildMinimapWidget();
@@ -196,6 +200,8 @@ namespace DungeonCrawler.Map
                 playerArrowRect.localEulerAngles = new Vector3(0f, 0f, -playerRotY);
             }
 
+            float step = DungeonMapManager.Instance.StepSize > 0f ? DungeonMapManager.Instance.StepSize : 2f;
+
             // 2. Update each cell relative to player
             for (int cy = 0; cy < gridSize; cy++)
             {
@@ -211,14 +217,28 @@ namespace DungeonCrawler.Map
 
                     if (isVisited)
                     {
-                        cell.floorImage.color = visitedFloorColor;
+                        Vector3 tileCenter = new Vector3(targetWorldTile.x * step, 1.0f, targetWorldTile.y * step);
+                        bool isSolidWall = Physics.CheckSphere(tileCenter, 0.45f, obstacleLayer);
 
-                        // Check and display walls
-                        byte walls = GetOrDetectWalls(targetWorldTile);
-                        cell.wallNorth.enabled = (walls & WALL_NORTH) != 0;
-                        cell.wallEast.enabled  = (walls & WALL_EAST) != 0;
-                        cell.wallSouth.enabled = (walls & WALL_SOUTH) != 0;
-                        cell.wallWest.enabled  = (walls & WALL_WEST) != 0;
+                        if (isSolidWall)
+                        {
+                            cell.floorImage.color = new Color(0.38f, 0.32f, 0.22f, 0.95f); // Solid Wall block color
+                            cell.wallNorth.enabled = false;
+                            cell.wallEast.enabled = false;
+                            cell.wallSouth.enabled = false;
+                            cell.wallWest.enabled = false;
+                        }
+                        else
+                        {
+                            cell.floorImage.color = visitedFloorColor;
+
+                            // Check and display walls
+                            byte walls = GetOrDetectWalls(targetWorldTile);
+                            cell.wallNorth.enabled = (walls & WALL_NORTH) != 0;
+                            cell.wallEast.enabled  = (walls & WALL_EAST) != 0;
+                            cell.wallSouth.enabled = (walls & WALL_SOUTH) != 0;
+                            cell.wallWest.enabled  = (walls & WALL_WEST) != 0;
+                        }
                     }
                     else
                     {

@@ -9,7 +9,7 @@ namespace DungeonCrawler.Interaction
     {
         [Header("Settings")]
         [SerializeField] private string keyName = "Kunci Dungeon";
-        [SerializeField] private string pickupPrompt = "[E] Ambil Kunci Dungeon";
+        [SerializeField] private string pickupPrompt = "[E] Ambil Kunci";
         [SerializeField] private float bobbingSpeed = 2.5f;
         [SerializeField] private float bobbingHeight = 0.15f;
         [SerializeField] private float rotationSpeed = 60f;

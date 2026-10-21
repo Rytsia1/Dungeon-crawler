@@ -85,9 +85,9 @@ namespace DungeonCrawler.Map
 
         public Vector2Int WorldToGrid(Vector3 worldPos)
         {
-            int gx = Mathf.RoundToInt(worldPos.x / stepSize);
-            int gz = Mathf.RoundToInt(worldPos.z / stepSize);
-            return new Vector2Int(gx, gz);
+            int gridX = Mathf.RoundToInt(worldPos.x / stepSize);
+            int gridY = Mathf.RoundToInt(worldPos.z / stepSize);
+            return new Vector2Int(gridX, gridY);
         }
 
         public Vector3 GridToWorld(Vector2Int gridPos, float y = 0f)

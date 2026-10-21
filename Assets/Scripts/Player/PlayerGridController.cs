@@ -16,6 +16,7 @@ namespace DungeonCrawler.Player
         [Header("Grid Movement Settings")]
         [SerializeField] private float stepSize = 2f;
         [SerializeField] private float moveDuration = 0.28f;
+        [SerializeField] private float stepBufferDelay = 0.06f; // Buffer delay between continuous steps
         [SerializeField] private float rotateDuration = 0.2f;
 
         [Header("Collision & Raycast")]
@@ -74,8 +75,11 @@ namespace DungeonCrawler.Player
 #if ENABLE_INPUT_SYSTEM
             if (Keyboard.current != null)
             {
-                moveForward = Keyboard.current.wKey.wasPressedThisFrame || Keyboard.current.upArrowKey.wasPressedThisFrame;
-                moveBackward = Keyboard.current.sKey.wasPressedThisFrame || Keyboard.current.downArrowKey.wasPressedThisFrame;
+                // Continuous movement when key is held down
+                moveForward = Keyboard.current.wKey.isPressed || Keyboard.current.upArrowKey.isPressed;
+                moveBackward = Keyboard.current.sKey.isPressed || Keyboard.current.downArrowKey.isPressed;
+
+                // Discrete 90-degree rotation only on initial press to prevent accidental spinning
                 turnLeft = Keyboard.current.aKey.wasPressedThisFrame || Keyboard.current.leftArrowKey.wasPressedThisFrame;
                 turnRight = Keyboard.current.dKey.wasPressedThisFrame || Keyboard.current.rightArrowKey.wasPressedThisFrame;
             }
@@ -84,8 +88,11 @@ namespace DungeonCrawler.Player
 #if ENABLE_LEGACY_INPUT_MANAGER
             if (!moveForward && !moveBackward && !turnLeft && !turnRight)
             {
-                moveForward = Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow);
-                moveBackward = Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow);
+                // Continuous movement when key is held down
+                moveForward = Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow);
+                moveBackward = Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow);
+
+                // Discrete 90-degree rotation only on initial press
                 turnLeft = Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow);
                 turnRight = Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow);
             }
@@ -148,6 +155,13 @@ namespace DungeonCrawler.Player
             }
 
             transform.position = SnapPosition(targetPosition);
+
+            // Buffer delay before next continuous step check (~0.05-0.08s)
+            if (stepBufferDelay > 0f)
+            {
+                yield return new WaitForSeconds(stepBufferDelay);
+            }
+
             isMoving = false;
         }
 
